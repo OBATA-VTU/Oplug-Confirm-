@@ -1,0 +1,130 @@
+import { useState, useEffect } from 'react';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { Save, Tag, Percent, ShoppingBag, Smartphone, Wifi, Tv, Zap } from 'lucide-react';
+import { cn } from '../lib/utils';
+
+export default function AdminPrices() {
+  const [prices, setPrices] = useState({
+    airtime: { markup: 0, displayName: 'Airtime Topup' },
+    data: { markup: 5, displayName: 'Data Bundles' },
+    cable: { markup: 100, displayName: 'Cable TV' },
+    electricity: { markup: 100, displayName: 'Electricity Bills' },
+    education: { markup: 200, displayName: 'Education Pins' },
+    smm: { markup: 15, displayName: 'SMM Services' }
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    const fetchPrices = async () => {
+      try {
+        const docSnap = await getDoc(doc(db, 'settings', 'prices'));
+        if (docSnap.exists()) {
+          setPrices({ ...prices, ...docSnap.data() });
+        }
+      } catch (err) {
+        console.error('Error fetching prices:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPrices();
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setMessage('');
+    try {
+      await setDoc(doc(db, 'settings', 'prices'), prices);
+      setMessage('Prices updated successfully!');
+    } catch (err) {
+      setMessage('Failed to update prices.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return <div>Loading prices...</div>;
+
+  return (
+    <div className="space-y-8 max-w-5xl">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold tracking-tight">Price & Display Management</h1>
+        <button 
+          onClick={handleSave}
+          disabled={saving}
+          className="bg-blue-700 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-blue-800 transition-all shadow-lg shadow-blue-100 disabled:opacity-50"
+        >
+          <Save className="w-5 h-5" />
+          {saving ? 'Saving...' : 'Save Changes'}
+        </button>
+      </div>
+
+      {message && (
+        <div className={cn(
+          "p-4 rounded-2xl text-sm font-bold border",
+          message.includes('success') ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-red-50 text-red-700 border-red-100"
+        )}>
+          {message}
+        </div>
+      )}
+
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {[
+          { key: 'airtime', icon: Smartphone, color: 'text-blue-600', bg: 'bg-blue-50' },
+          { key: 'data', icon: Wifi, color: 'text-purple-600', bg: 'bg-purple-50' },
+          { key: 'cable', icon: Tv, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+          { key: 'electricity', icon: Zap, color: 'text-yellow-600', bg: 'bg-yellow-50' },
+          { key: 'education', icon: ShoppingBag, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+          { key: 'smm', icon: Tag, color: 'text-orange-600', bg: 'bg-orange-50' },
+        ].map((item) => (
+          <div key={item.key} className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm space-y-4">
+            <div className="flex items-center gap-3">
+              <div className={cn("p-3 rounded-2xl", item.bg)}>
+                <item.icon className={cn("w-6 h-6", item.color)} />
+              </div>
+              <h3 className="font-bold capitalize">{item.key}</h3>
+            </div>
+            
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">Display Name</label>
+                <input 
+                  type="text" 
+                  value={(prices as any)[item.key].displayName}
+                  onChange={(e) => setPrices({
+                    ...prices, 
+                    [item.key]: { ...(prices as any)[item.key], displayName: e.target.value }
+                  })}
+                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">
+                  {item.key === 'cable' || item.key === 'electricity' || item.key === 'education' ? 'Fixed Fee (₦)' : 'Markup (%)'}
+                </label>
+                <div className="relative">
+                  <input 
+                    type="number" 
+                    value={(prices as any)[item.key].markup}
+                    onChange={(e) => setPrices({
+                      ...prices, 
+                      [item.key]: { ...(prices as any)[item.key], markup: Number(e.target.value) }
+                    })}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
+                    {item.key === 'cable' || item.key === 'electricity' || item.key === 'education' ? '₦' : '%'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
