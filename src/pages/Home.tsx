@@ -5,43 +5,18 @@ import {
   Smartphone, Wifi, Tv, Zap, GraduationCap, 
   ShieldCheck, Zap as ZapIcon, Users, ArrowRight, 
   CheckCircle2, MessageSquare, Ticket, HelpCircle,
-  Star, Quote, Globe, Code
+  Star, Quote, Globe, Code, Layout, Shield, CreditCard, Landmark, Wallet,
+  LayoutDashboard
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-
-const services = [
-  { name: 'Airtime Topup', icon: Smartphone, color: 'text-blue-600', bg: 'bg-blue-50' },
-  { name: 'Data Bundles', icon: Wifi, color: 'text-purple-600', bg: 'bg-purple-50' },
-  { name: 'Cable TV', icon: Tv, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-  { name: 'Electricity', icon: Zap, color: 'text-yellow-600', bg: 'bg-yellow-50' },
-  { name: 'Education Pins', icon: GraduationCap, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-];
-
-const testimonials = [
-  {
-    name: "Sarah Johnson",
-    role: "Reseller",
-    content: "Oplug has completely transformed my VTU business. The delivery is instant and the prices are the best in the market.",
-    avatar: "https://i.pravatar.cc/150?u=sarah"
-  },
-  {
-    name: "Ahmed Bello",
-    role: "Regular User",
-    content: "I love how easy it is to fund my wallet. The virtual account feature is a game changer for me.",
-    avatar: "https://i.pravatar.cc/150?u=ahmed"
-  },
-  {
-    name: "Chidi Okafor",
-    role: "Developer",
-    content: "The API integration was seamless. I've integrated Oplug into my own platform and it works perfectly.",
-    avatar: "https://i.pravatar.cc/150?u=chidi"
-  }
-];
+import Logo from '../components/Logo';
+import { useAuth } from '../context/AuthContext';
 
 export default function Home() {
   const [settings, setSettings] = useState<any>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -59,6 +34,38 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white overflow-x-hidden">
+      {/* Navigation */}
+      <nav className="h-24 border-b border-gray-100 bg-white/80 backdrop-blur-md sticky top-0 z-[100] px-6">
+        <div className="container mx-auto h-full flex items-center justify-between">
+          <Logo />
+          <div className="hidden lg:flex items-center gap-10">
+            <Link to="/pricing" className="text-sm font-bold text-gray-500 hover:text-blue-700 transition-colors">Pricing</Link>
+            <Link to="/blog" className="text-sm font-bold text-gray-500 hover:text-blue-700 transition-colors">Blog</Link>
+            <Link to="/about" className="text-sm font-bold text-gray-500 hover:text-blue-700 transition-colors">About</Link>
+            <Link to="/developer" className="text-sm font-bold text-gray-500 hover:text-blue-700 transition-colors">Developers</Link>
+            
+            {user ? (
+              <Link to="/dashboard" className="bg-blue-700 text-white px-8 py-3 rounded-xl font-bold text-sm hover:bg-blue-800 transition-all shadow-lg shadow-blue-100 flex items-center gap-2">
+                <LayoutDashboard className="w-4 h-4" />
+                Dashboard
+              </Link>
+            ) : (
+              <>
+                <Link to="/login" className="text-sm font-bold text-blue-700 hover:underline">Login</Link>
+                <Link to="/signup" className="bg-blue-700 text-white px-8 py-3 rounded-xl font-bold text-sm hover:bg-blue-800 transition-all shadow-lg shadow-blue-100">
+                  Create Account
+                </Link>
+              </>
+            )}
+          </div>
+          {user ? (
+            <Link to="/dashboard" className="lg:hidden bg-blue-700 text-white px-6 py-2 rounded-xl font-bold text-sm">Dashboard</Link>
+          ) : (
+            <Link to="/login" className="lg:hidden bg-blue-700 text-white px-6 py-2 rounded-xl font-bold text-sm">Login</Link>
+          )}
+        </div>
+      </nav>
+
       {/* Hero Section */}
       <section className="relative pt-20 pb-32 lg:pt-32 lg:pb-48 overflow-hidden">
         <div className="container mx-auto px-6 relative z-10">
@@ -76,7 +83,7 @@ export default function Home() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="text-5xl lg:text-7xl font-black tracking-tight text-gray-900 mb-8 leading-[1.1]"
+                className="text-5xl lg:text-8xl font-black tracking-tighter text-gray-900 mb-8 leading-[0.9]"
               >
                 {settings?.siteName || 'Oplug'} <br />
                 <span className="text-blue-700">Zero Stress.</span>
@@ -95,13 +102,22 @@ export default function Home() {
                 transition={{ delay: 0.3 }}
                 className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4"
               >
-                <Link to="/signup" className="w-full sm:w-auto bg-blue-700 text-white px-10 py-5 rounded-2xl font-bold text-lg hover:bg-blue-800 transition-all shadow-2xl shadow-blue-200 flex items-center justify-center gap-2">
-                  Get Started Now
-                  <ArrowRight className="w-5 h-5" />
-                </Link>
-                <Link to="/login" className="w-full sm:w-auto bg-gray-50 text-gray-900 px-10 py-5 rounded-2xl font-bold text-lg hover:bg-gray-100 transition-all flex items-center justify-center">
-                  Login to Account
-                </Link>
+                {user ? (
+                  <Link to="/dashboard" className="w-full sm:w-auto bg-blue-700 text-white px-10 py-5 rounded-2xl font-bold text-lg hover:bg-blue-800 transition-all shadow-2xl shadow-blue-200 flex items-center justify-center gap-2">
+                    Go to Dashboard
+                    <ArrowRight className="w-5 h-5" />
+                  </Link>
+                ) : (
+                  <>
+                    <Link to="/signup" className="w-full sm:w-auto bg-blue-700 text-white px-10 py-5 rounded-2xl font-bold text-lg hover:bg-blue-800 transition-all shadow-2xl shadow-blue-200 flex items-center justify-center gap-2">
+                      Get Started Now
+                      <ArrowRight className="w-5 h-5" />
+                    </Link>
+                    <Link to="/login" className="w-full sm:w-auto bg-gray-50 text-gray-900 px-10 py-5 rounded-2xl font-bold text-lg hover:bg-gray-100 transition-all flex items-center justify-center">
+                      Login to Account
+                    </Link>
+                  </>
+                )}
               </motion.div>
             </div>
             <div className="flex-1 relative">
@@ -111,15 +127,13 @@ export default function Home() {
                 transition={{ delay: 0.4, type: 'spring' }}
                 className="relative z-10"
               >
-                {/* SVG Illustration of Woman with Phone */}
-                <div className="relative">
+                <div className="relative min-h-[400px] flex items-center justify-center">
                   <img 
-                    src="https://illustrations.popsy.co/blue/woman-with-smartphone.svg" 
+                    src={settings?.heroImage || "https://illustrations.popsy.co/blue/woman-with-smartphone.svg"} 
                     alt="Woman using phone" 
-                    className="w-full max-w-lg mx-auto"
+                    className="w-full max-w-lg mx-auto drop-shadow-2xl"
                     referrerPolicy="no-referrer"
                   />
-                  {/* Comic Bubble */}
                   <motion.div 
                     initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
@@ -139,7 +153,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Supported By Section */}
+      {/* Partners Section */}
       <section className="py-12 bg-gray-50/50 border-y border-gray-100">
         <div className="container mx-auto px-6">
           <p className="text-center text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-8">Trusted by industry leaders</p>
@@ -159,54 +173,87 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Why Join Us */}
+      {/* Services Grid */}
       <section className="py-32">
         <div className="container mx-auto px-6">
           <div className="text-center max-w-3xl mx-auto mb-20">
-            <h2 className="text-4xl font-black mb-6">Why Choose Oplug?</h2>
-            <p className="text-gray-500 leading-relaxed">We provide the most reliable and affordable VTU services in Nigeria with a focus on speed and security.</p>
+            <h2 className="text-4xl font-black mb-6">Our Services</h2>
+            <p className="text-gray-500">Everything you need for your digital life, all in one place.</p>
           </div>
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
             {[
-              { title: 'Instant Delivery', desc: 'All our services are delivered instantly. No delays, no excuses.', icon: ZapIcon, color: 'text-blue-600', bg: 'bg-blue-50' },
-              { title: 'Secure Payments', desc: 'Your transactions are protected with industry-standard encryption.', icon: ShieldCheck, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-              { title: '24/7 Support', desc: 'Our dedicated support team is always ready to help you.', icon: MessageSquare, color: 'text-purple-600', bg: 'bg-purple-50' },
-            ].map((feature, i) => (
-              <div key={i} className="p-10 rounded-[2.5rem] bg-white border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all">
-                <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center mb-8", feature.bg)}>
-                  <feature.icon className={cn("w-8 h-8", feature.color)} />
+              { name: 'Airtime', icon: Smartphone, color: 'text-blue-600', bg: 'bg-blue-50', link: '/airtime' },
+              { name: 'Data', icon: Wifi, color: 'text-purple-600', bg: 'bg-purple-50', link: '/data' },
+              { name: 'Cable TV', icon: Tv, color: 'text-indigo-600', bg: 'bg-indigo-50', link: '/cable' },
+              { name: 'Electricity', icon: Zap, color: 'text-yellow-600', bg: 'bg-yellow-50', link: '/electricity' },
+              { name: 'Education', icon: GraduationCap, color: 'text-emerald-600', bg: 'bg-emerald-50', link: '/education' },
+            ].map((service, i) => (
+              <Link key={i} to={service.link} className="p-8 rounded-[2rem] bg-white border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all text-center group">
+                <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform", service.bg)}>
+                  <service.icon className={cn("w-8 h-8", service.color)} />
                 </div>
-                <h3 className="text-xl font-bold mb-4">{feature.title}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed">{feature.desc}</p>
-              </div>
+                <h3 className="font-bold text-gray-900">{service.name}</h3>
+              </Link>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Market Woman Section */}
+      {/* Fast Delivery Section */}
       <section className="py-32 bg-gray-50">
         <div className="container mx-auto px-6">
           <div className="flex flex-col lg:flex-row items-center gap-16">
             <div className="flex-1">
               <img 
-                src="https://illustrations.popsy.co/blue/woman-working-on-laptop.svg" 
-                alt="Market Woman" 
-                className="w-full max-w-lg mx-auto"
+                src={settings?.fastDeliveryImage || "https://illustrations.popsy.co/blue/man-on-rocket.svg"} 
+                alt="Fast Delivery" 
+                className="w-full max-w-lg mx-auto drop-shadow-xl"
                 referrerPolicy="no-referrer"
               />
             </div>
             <div className="flex-1 space-y-8">
-              <h2 className="text-4xl font-black leading-tight">Empowering Small Businesses & Resellers</h2>
+              <h2 className="text-4xl font-black leading-tight">Lightning Fast Delivery</h2>
               <p className="text-lg text-gray-500 leading-relaxed">
-                Whether you're a market woman looking to earn extra income or a tech-savvy reseller, Oplug provides the tools you need to succeed.
+                We know your time is valuable. That's why our automated system ensures that all your purchases are delivered instantly, 24/7.
+              </p>
+              <div className="grid grid-cols-2 gap-6">
+                <div className="p-6 bg-white rounded-3xl border border-gray-100">
+                  <h4 className="font-bold text-blue-700 text-2xl mb-1">99.9%</h4>
+                  <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Uptime</p>
+                </div>
+                <div className="p-6 bg-white rounded-3xl border border-gray-100">
+                  <h4 className="font-bold text-blue-700 text-2xl mb-1">&lt; 2s</h4>
+                  <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Delivery Time</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Reseller Section */}
+      <section className="py-32">
+        <div className="container mx-auto px-6">
+          <div className="flex flex-col lg:flex-row-reverse items-center gap-16">
+            <div className="flex-1">
+              <img 
+                src={settings?.resellerImage || "https://illustrations.popsy.co/blue/shaking-hands.svg"} 
+                alt="Partnership" 
+                className="w-full max-w-lg mx-auto drop-shadow-xl"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+            <div className="flex-1 space-y-8">
+              <h2 className="text-4xl font-black leading-tight">Earn More as a Reseller</h2>
+              <p className="text-lg text-gray-500 leading-relaxed">
+                Join our network of successful resellers and start earning today. We offer the best wholesale prices and a dedicated dashboard to manage your business.
               </p>
               <ul className="space-y-4">
                 {[
-                  'Wholesale prices for all services',
-                  'Easy-to-use dashboard for tracking sales',
-                  'Instant funding via virtual accounts',
-                  'Dedicated reseller support group'
+                  'Exclusive wholesale discounts',
+                  'Custom branding options',
+                  'Priority customer support',
+                  'Detailed sales analytics'
                 ].map((item, i) => (
                   <li key={i} className="flex items-center gap-3 text-gray-700 font-bold">
                     <CheckCircle2 className="w-5 h-5 text-emerald-500" />
@@ -214,8 +261,8 @@ export default function Home() {
                   </li>
                 ))}
               </ul>
-              <Link to="/signup" className="inline-flex items-center gap-2 bg-blue-700 text-white px-8 py-4 rounded-2xl font-bold hover:bg-blue-800 transition-all">
-                Become a Reseller
+              <Link to="/signup" className="inline-flex items-center gap-2 bg-blue-700 text-white px-8 py-4 rounded-2xl font-bold hover:bg-blue-800 transition-all shadow-xl shadow-blue-100">
+                Start Reselling
                 <ArrowRight className="w-5 h-5" />
               </Link>
             </div>
@@ -224,84 +271,103 @@ export default function Home() {
       </section>
 
       {/* Developer Section */}
-      <section className="py-32">
-        <div className="container mx-auto px-6">
-          <div className="flex flex-col lg:flex-row-reverse items-center gap-16">
+      <section className="py-32 bg-gray-900 text-white relative overflow-hidden">
+        <div className="container mx-auto px-6 relative z-10">
+          <div className="flex flex-col lg:flex-row items-center gap-16">
             <div className="flex-1">
               <img 
-                src="https://illustrations.popsy.co/blue/web-design.svg" 
+                src={settings?.developerImage || "https://illustrations.popsy.co/white/web-design.svg"} 
                 alt="API Integration" 
-                className="w-full max-w-lg mx-auto"
+                className="w-full max-w-lg mx-auto drop-shadow-[0_0_30px_rgba(255,255,255,0.1)]"
                 referrerPolicy="no-referrer"
               />
             </div>
             <div className="flex-1 space-y-8">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-50 text-purple-700 text-sm font-bold">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 text-blue-400 text-sm font-bold">
                 <Code className="w-4 h-4" />
-                For Developers
+                Developer Friendly
               </div>
-              <h2 className="text-4xl font-black leading-tight">Powerful API for Seamless Integration</h2>
-              <p className="text-lg text-gray-500 leading-relaxed">
-                Integrate our VTU services into your own website or mobile app with our robust and well-documented API.
+              <h2 className="text-4xl font-black leading-tight">Robust API for Developers</h2>
+              <p className="text-lg text-blue-100/60 leading-relaxed">
+                Integrate our services into your own applications with ease. Our API is well-documented, secure, and highly reliable.
               </p>
-              <div className="bg-gray-900 rounded-3xl p-8 font-mono text-sm text-blue-400 overflow-x-auto">
-                <pre>
-{`POST /api/vtu/airtime
+              <div className="bg-black/50 rounded-3xl p-8 font-mono text-sm text-blue-400 border border-white/5">
+                <pre className="overflow-x-auto">
+{`POST /api/v1/data/purchase
 {
   "network": "MTN",
-  "amount": 1000,
-  "phone": "08142452729",
-  "plan_type": "VTU"
+  "plan_id": "1GB",
+  "phone": "08142452729"
 }`}
                 </pre>
               </div>
-              <Link to="/developer" className="inline-flex items-center gap-2 bg-gray-900 text-white px-8 py-4 rounded-2xl font-bold hover:bg-black transition-all">
-                View API Documentation
+              <Link to="/developer/docs" className="inline-flex items-center gap-2 bg-white text-gray-900 px-8 py-4 rounded-2xl font-bold hover:bg-gray-100 transition-all">
+                API Documentation
                 <ArrowRight className="w-5 h-5" />
               </Link>
             </div>
           </div>
         </div>
+        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.1),transparent_70%)]" />
       </section>
 
-      {/* How to Begin */}
-      <section className="py-32 bg-blue-700 text-white">
+      {/* Funding Section */}
+      <section className="py-32">
         <div className="container mx-auto px-6">
-          <div className="text-center max-w-3xl mx-auto mb-20">
-            <h2 className="text-4xl font-black mb-6">How to Get Started</h2>
-            <p className="opacity-80">Start using Oplug in three simple steps.</p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-12">
-            {[
-              { step: '01', title: 'Create Account', desc: 'Sign up for free in less than a minute.' },
-              { step: '02', title: 'Fund Wallet', desc: 'Add money to your wallet via transfer or card.' },
-              { step: '03', title: 'Start Buying', desc: 'Purchase any service and enjoy instant delivery.' },
-            ].map((item, i) => (
-              <div key={i} className="relative">
-                <span className="text-8xl font-black opacity-10 absolute -top-10 -left-4">{item.step}</span>
-                <h3 className="text-2xl font-bold mb-4 relative z-10">{item.title}</h3>
-                <p className="opacity-70 leading-relaxed">{item.desc}</p>
+          <div className="flex flex-col lg:flex-row-reverse items-center gap-16">
+            <div className="flex-1">
+              <img 
+                src={settings?.fundingImage || "https://illustrations.popsy.co/blue/payment-processed.svg"} 
+                alt="Easy Funding" 
+                className="w-full max-w-lg mx-auto drop-shadow-xl"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+            <div className="flex-1 space-y-8">
+              <h2 className="text-4xl font-black leading-tight">Hassle-Free Funding</h2>
+              <p className="text-lg text-gray-500 leading-relaxed">
+                Fund your wallet instantly using any of our multiple payment methods. From automatic virtual accounts to secure card payments.
+              </p>
+              <div className="space-y-4">
+                {[
+                  { title: 'Virtual Accounts', icon: Landmark, desc: 'Permanent accounts for instant funding.' },
+                  { title: 'Card Payments', icon: CreditCard, desc: 'Secure payments via Paystack.' },
+                  { title: 'Manual Transfer', icon: Wallet, desc: 'Direct bank transfers with proof upload.' },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-start gap-4 p-6 bg-gray-50 rounded-3xl border border-gray-100">
+                    <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm">
+                      <item.icon className="w-6 h-6 text-blue-700" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-gray-900">{item.title}</h4>
+                      <p className="text-sm text-gray-500">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
         </div>
       </section>
 
       {/* Testimonials */}
-      <section className="py-32">
+      <section className="py-32 bg-gray-50">
         <div className="container mx-auto px-6">
           <div className="text-center max-w-3xl mx-auto mb-20">
             <h2 className="text-4xl font-black mb-6">What Our Users Say</h2>
-            <p className="text-gray-500">Don't just take our word for it. Here's what our community thinks.</p>
+            <p className="text-gray-500">Join thousands of satisfied users who trust Oplug for their daily digital needs.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
-            {testimonials.map((t, i) => (
-              <div key={i} className="p-10 rounded-[2.5rem] bg-gray-50 border border-gray-100 relative">
-                <Quote className="absolute top-8 right-8 w-12 h-12 text-gray-200" />
+            {[
+              { name: 'Sarah J.', role: 'Reseller', content: 'The best VTU platform I have ever used. Delivery is truly instant!', avatar: 'https://i.pravatar.cc/150?u=1' },
+              { name: 'Michael O.', role: 'Developer', content: 'The API is so easy to integrate. My app was up and running in minutes.', avatar: 'https://i.pravatar.cc/150?u=2' },
+              { name: 'Blessing E.', role: 'User', content: 'I love the virtual account feature. Funding my wallet is so easy now.', avatar: 'https://i.pravatar.cc/150?u=3' },
+            ].map((t, i) => (
+              <div key={i} className="p-10 rounded-[2.5rem] bg-white border border-gray-100 shadow-sm">
                 <div className="flex gap-1 mb-6">
                   {[1,2,3,4,5].map(s => <Star key={s} className="w-4 h-4 fill-yellow-400 text-yellow-400" />)}
                 </div>
-                <p className="text-gray-600 italic mb-8 leading-relaxed">"{t.content}"</p>
+                <p className="text-gray-600 italic mb-8">"{t.content}"</p>
                 <div className="flex items-center gap-4">
                   <img src={t.avatar} alt={t.name} className="w-12 h-12 rounded-full" />
                   <div>
@@ -316,43 +382,34 @@ export default function Home() {
       </section>
 
       {/* Support Section */}
-      <section className="py-32 bg-gray-50">
+      <section className="py-32">
         <div className="container mx-auto px-6">
-          <div className="bg-white rounded-[3rem] p-12 lg:p-20 border border-gray-100 shadow-xl flex flex-col lg:flex-row items-center gap-16">
-            <div className="flex-1 space-y-8">
-              <h2 className="text-4xl font-black leading-tight">We're Here to Help</h2>
-              <p className="text-lg text-gray-500 leading-relaxed">
-                Have questions or need assistance? Our support team is available around the clock to ensure you have a smooth experience.
+          <div className="bg-blue-700 rounded-[3.5rem] p-12 lg:p-24 text-white flex flex-col lg:flex-row items-center gap-16 relative overflow-hidden">
+            <div className="flex-1 space-y-8 relative z-10">
+              <h2 className="text-4xl lg:text-5xl font-black leading-tight">Need Help? We're Always Online.</h2>
+              <p className="text-xl text-blue-100 leading-relaxed">
+                Our support team is available 24/7 to assist you with any questions or issues you might have.
               </p>
-              <div className="grid sm:grid-cols-2 gap-4">
-                <a href="https://wa.me/2348142452729" className="flex items-center gap-4 p-6 bg-emerald-50 rounded-3xl border border-emerald-100 group hover:bg-emerald-100 transition-all">
-                  <div className="w-12 h-12 bg-emerald-600 text-white rounded-2xl flex items-center justify-center">
-                    <MessageSquare className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest">WhatsApp</p>
-                    <p className="font-bold">Chat with us</p>
-                  </div>
+              <div className="flex flex-wrap gap-4">
+                <a href="https://wa.me/2348142452729" className="bg-white text-blue-700 px-8 py-4 rounded-2xl font-bold hover:bg-blue-50 transition-all flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5" />
+                  WhatsApp Support
                 </a>
-                <Link to="/support" className="flex items-center gap-4 p-6 bg-blue-50 rounded-3xl border border-blue-100 group hover:bg-blue-100 transition-all">
-                  <div className="w-12 h-12 bg-blue-700 text-white rounded-2xl flex items-center justify-center">
-                    <Ticket className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-blue-700 uppercase tracking-widest">Support Ticket</p>
-                    <p className="font-bold">Open a ticket</p>
-                  </div>
+                <Link to="/support" className="bg-blue-800 text-white px-8 py-4 rounded-2xl font-bold hover:bg-blue-900 transition-all flex items-center gap-2 border border-white/10">
+                  <Ticket className="w-5 h-5" />
+                  Open Support Ticket
                 </Link>
               </div>
             </div>
-            <div className="flex-1">
+            <div className="flex-1 relative z-10">
               <img 
-                src="https://illustrations.popsy.co/blue/customer-support.svg" 
+                src={settings?.supportImage || "https://illustrations.popsy.co/blue/customer-support.svg"} 
                 alt="Support" 
-                className="w-full max-w-md mx-auto"
+                className="w-full max-w-md mx-auto drop-shadow-2xl"
                 referrerPolicy="no-referrer"
               />
             </div>
+            <div className="absolute top-0 right-0 w-[50%] h-full bg-white/5 -skew-x-12 translate-x-1/2" />
           </div>
         </div>
       </section>
@@ -362,7 +419,7 @@ export default function Home() {
         <div className="container mx-auto px-6">
           <div className="grid md:grid-cols-4 gap-12 mb-20">
             <div className="col-span-2 space-y-6">
-              <h2 className="text-3xl font-black tracking-tighter">OPLUG</h2>
+              <Logo className="invert brightness-0" />
               <p className="text-gray-400 max-w-sm leading-relaxed">
                 The most reliable VTU platform in Nigeria. We provide instant delivery of data, airtime, and bill payments at wholesale prices.
               </p>

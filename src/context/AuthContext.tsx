@@ -8,14 +8,29 @@ import { doc, onSnapshot, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 
 interface UserProfile {
-  uid: string;
+  id: string;
   email: string;
-  displayName: string;
-  balance: number;
-  package: string;
+  fullName: string;
+  firstName: string;
+  lastName: string;
+  username: string;
+  phone: string;
+  walletBalance: number;
+  role: string;
+  status: string;
   referralCode: string;
-  referredBy?: string;
-  virtualAccounts?: any[];
+  referralCount: number;
+  referralEarnings: number;
+  referredBy: string | null;
+  isPinSet: boolean;
+  transactionPin: string;
+  virtualAccount?: {
+    account_name: string;
+    account_number: string;
+    bank_id: string;
+    bank_name: string;
+    reference: string;
+  };
   isProfileComplete: boolean;
   isAdmin?: boolean;
   createdAt: any;
@@ -48,12 +63,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           } else {
             // Create initial profile if it doesn't exist
             const initialProfile: UserProfile = {
-              uid: firebaseUser.uid,
+              id: firebaseUser.uid,
               email: firebaseUser.email || '',
-              displayName: firebaseUser.displayName || 'User',
-              balance: 0,
-              package: 'Reseller Package',
+              fullName: firebaseUser.displayName || 'User',
+              firstName: (firebaseUser.displayName || 'User').split(' ')[0],
+              lastName: (firebaseUser.displayName || 'User').split(' ')[1] || '',
+              username: firebaseUser.email?.split('@')[0] || 'user',
+              phone: '',
+              walletBalance: 0,
+              role: 'user',
+              status: 'active',
               referralCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
+              referralCount: 0,
+              referralEarnings: 0,
+              referredBy: null,
+              isPinSet: false,
+              transactionPin: '',
               isProfileComplete: false,
               createdAt: new Date(),
             };

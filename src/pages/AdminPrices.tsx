@@ -38,7 +38,7 @@ export default function AdminPrices() {
     setSaving(true);
     setMessage('');
     try {
-      await setDoc(doc(db, 'settings', 'prices'), prices);
+      await setDoc(doc(db, 'settings', 'prices'), prices, { merge: true });
       setMessage('Prices updated successfully!');
     } catch (err) {
       setMessage('Failed to update prices.');

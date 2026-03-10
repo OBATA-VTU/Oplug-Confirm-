@@ -21,10 +21,13 @@ import {
   Repeat,
   Wallet,
   ShoppingCart,
-  ShieldAlert
+  ShieldAlert,
+  Shield
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
+
+import Logo from './Logo';
 
 const navItems = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
@@ -67,72 +70,106 @@ export default function Layout() {
 
       {/* Sidebar */}
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0",
+        "fixed inset-y-0 left-0 z-50 w-72 bg-[#0A0A0A] text-white transform transition-transform duration-300 ease-in-out lg:translate-x-0",
         isSidebarOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <div className="flex flex-col h-full">
-          <div className="p-6 flex items-center justify-between">
-            <Link to="/dashboard" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-blue-700 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xl">O</span>
-              </div>
-              <span className="text-2xl font-bold text-blue-700">OPLUG</span>
+          <div className="p-8 flex items-center justify-between">
+            <Link to="/dashboard">
+              <Logo className="scale-110 origin-left brightness-0 invert" />
             </Link>
-            <button className="lg:hidden" onClick={() => setIsSidebarOpen(false)}>
+            <button className="lg:hidden text-white/60 hover:text-white" onClick={() => setIsSidebarOpen(false)}>
               <X className="w-6 h-6" />
             </button>
           </div>
 
-          <nav className="flex-1 overflow-y-auto px-4 py-2">
-            <div className="space-y-1">
+          <nav className="flex-1 overflow-y-auto px-4 py-4 scrollbar-hide">
+            <div className="space-y-1.5">
+              <p className="px-4 text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mb-4">Main Menu</p>
               {navItems.map((item) => (
                 <Link
                   key={item.path}
                   to={item.path}
                   onClick={() => setIsSidebarOpen(false)}
                   className={cn(
-                    "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors",
+                    "flex items-center gap-4 px-4 py-3.5 rounded-2xl text-sm font-semibold transition-all duration-200 group",
                     location.pathname === item.path 
-                      ? "bg-blue-50 text-blue-700" 
-                      : "text-gray-600 hover:bg-gray-100"
+                      ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" 
+                      : "text-white/60 hover:bg-white/5 hover:text-white"
                   )}
                 >
-                  <item.icon className="w-5 h-5" />
+                  <item.icon className={cn(
+                    "w-5 h-5 transition-colors",
+                    location.pathname === item.path ? "text-white" : "text-white/40 group-hover:text-white"
+                  )} />
                   {item.name}
                 </Link>
               ))}
+              
               {profile?.isAdmin && (
-                <Link
-                  to="/admin"
-                  onClick={() => setIsSidebarOpen(false)}
-                  className={cn(
-                    "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors",
-                    location.pathname.startsWith('/admin') 
-                      ? "bg-red-50 text-red-700" 
-                      : "text-red-600 hover:bg-red-50"
-                  )}
-                >
-                  <ShieldAlert className="w-5 h-5" />
-                  Admin Panel
-                </Link>
+                <>
+                  <div className="h-px bg-white/5 my-6 mx-4" />
+                  <p className="px-4 text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mb-4">Administration</p>
+                  <Link
+                    to="/admin"
+                    onClick={() => setIsSidebarOpen(false)}
+                    className={cn(
+                      "flex items-center gap-4 px-4 py-3.5 rounded-2xl text-sm font-semibold transition-all duration-200 group",
+                      location.pathname.startsWith('/admin') 
+                        ? "bg-red-600 text-white shadow-lg shadow-red-600/20" 
+                        : "text-red-400/60 hover:bg-red-500/10 hover:text-red-400"
+                    )}
+                  >
+                    <ShieldAlert className="w-5 h-5" />
+                    Admin Panel
+                  </Link>
+                </>
               )}
+              <Link
+                to="/dashboard/terms"
+                onClick={() => setIsSidebarOpen(false)}
+                className={cn(
+                  "flex items-center gap-4 px-4 py-3.5 rounded-2xl text-sm font-semibold transition-all duration-200 group",
+                  location.pathname === '/dashboard/terms' 
+                    ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" 
+                    : "text-white/60 hover:bg-white/5 hover:text-white"
+                )}
+              >
+                <Shield className={cn(
+                  "w-5 h-5 transition-colors",
+                  location.pathname === '/dashboard/terms' ? "text-white" : "text-white/40 group-hover:text-white"
+                )} />
+                Terms & Privacy
+              </Link>
             </div>
           </nav>
 
-          <div className="p-4 border-t border-gray-100">
-            <button 
-              onClick={handleLogout}
-              className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
-            >
-              <LogOut className="w-5 h-5" />
-              Logout
-            </button>
+          <div className="p-6 border-t border-white/5">
+            <div className="bg-white/5 rounded-[2rem] p-4 mb-6">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-xs font-bold">
+                  {profile?.fullName?.charAt(0) || profile?.username?.charAt(0)}
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <p className="text-sm font-bold truncate">{profile?.fullName || profile?.username}</p>
+                  <p className="text-[10px] text-white/40 uppercase tracking-wider font-bold">{profile?.role}</p>
+                </div>
+              </div>
+              <button 
+                onClick={handleLogout}
+                className="w-full py-2.5 rounded-xl text-xs font-bold bg-white/5 hover:bg-red-500/10 text-red-400 transition-colors flex items-center justify-center gap-2"
+              >
+                <LogOut className="w-4 h-4" />
+                Sign Out
+              </button>
+            </div>
+            <p className="text-[10px] text-center text-white/20 font-medium">Version 2.4.0 • Oplug Tech</p>
           </div>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="lg:ml-64 min-h-screen flex flex-col">
+      <main className="lg:ml-72 min-h-screen flex flex-col">
         {/* Header */}
         <header className="sticky top-0 z-30 bg-white border-bottom border-gray-200 h-16 flex items-center justify-between px-4 lg:px-8">
           <button className="lg:hidden" onClick={() => setIsSidebarOpen(true)}>
@@ -151,8 +188,8 @@ export default function Layout() {
                 <User className="w-5 h-5 text-gray-500" />
               </div>
               <div className="hidden sm:block text-left">
-                <p className="text-xs font-semibold">{profile?.displayName}</p>
-                <p className="text-[10px] text-gray-500">{profile?.package}</p>
+                <p className="text-xs font-semibold">{profile?.fullName || profile?.username}</p>
+                <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">{profile?.role}</p>
               </div>
               <ChevronDown className="w-4 h-4 text-gray-400" />
             </div>

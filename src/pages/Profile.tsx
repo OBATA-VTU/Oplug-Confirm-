@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { User, Mail, Phone, Shield, Bell, Smartphone, Camera, CheckCircle2, Key, Copy } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { User, Mail, Phone, Shield, Bell, Smartphone, Camera, CheckCircle2, Key, Copy, AtSign } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -10,7 +11,7 @@ export default function Profile() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [formData, setFormData] = useState({
-    displayName: profile?.displayName || '',
+    fullName: profile?.fullName || '',
     phone: profile?.phone || '',
   });
 
@@ -62,11 +63,11 @@ export default function Profile() {
                 <Camera className="w-4 h-4" />
               </button>
             </div>
-            <h3 className="font-bold text-lg">{profile?.displayName || 'User'}</h3>
+            <h3 className="font-bold text-lg">{profile?.fullName || profile?.username || 'User'}</h3>
             <p className="text-xs text-gray-500">{profile?.email}</p>
             <div className="mt-4 flex justify-center">
               <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-[10px] font-bold uppercase tracking-wider">
-                {profile?.package || 'User'}
+                {profile?.role || 'User'}
               </span>
             </div>
           </div>
@@ -101,42 +102,54 @@ export default function Profile() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">Full Name</label>
-                  <input 
-                    type="text" 
-                    value={formData.displayName}
-                    onChange={(e) => setFormData({...formData, displayName: e.target.value})}
-                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input 
+                      type="text" 
+                      value={formData.fullName}
+                      onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+                      className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-11 pr-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">Username</label>
-                  <input 
-                    type="text" 
-                    value={profile?.username || ''}
-                    disabled
-                    className="w-full bg-gray-100 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-400 cursor-not-allowed"
-                  />
+                  <div className="relative">
+                    <AtSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input 
+                      type="text" 
+                      value={profile?.username || ''}
+                      disabled
+                      className="w-full bg-gray-100 border border-gray-100 rounded-xl pl-11 pr-4 py-3 text-sm text-gray-400 cursor-not-allowed"
+                    />
+                  </div>
                 </div>
               </div>
 
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">Email Address</label>
-                <input 
-                  type="email" 
-                  value={profile?.email || ''}
-                  disabled
-                  className="w-full bg-gray-100 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-400 cursor-not-allowed"
-                />
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input 
+                    type="email" 
+                    value={profile?.email || ''}
+                    disabled
+                    className="w-full bg-gray-100 border border-gray-100 rounded-xl pl-11 pr-4 py-3 text-sm text-gray-400 cursor-not-allowed"
+                  />
+                </div>
               </div>
 
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">Phone Number</label>
-                <input 
-                  type="tel" 
-                  value={formData.phone}
-                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                />
+                <div className="relative">
+                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input 
+                    type="tel" 
+                    value={formData.phone}
+                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-11 pr-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
               </div>
 
               <div className="pt-4">
@@ -151,14 +164,14 @@ export default function Profile() {
             </form>
           </div>
 
-          {profile?.apiKey && (
-            <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100">
-              <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-                <Key className="w-5 h-5 text-blue-700" />
-                API Access
-              </h3>
-              <div className="space-y-4">
-                <p className="text-xs text-gray-500">Your unique API key for developer integrations.</p>
+          <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100">
+            <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+              <Key className="w-5 h-5 text-blue-700" />
+              API Access
+            </h3>
+            <div className="space-y-4">
+              <p className="text-xs text-gray-500">Your unique API key for developer integrations.</p>
+              {profile?.apiKey ? (
                 <div className="relative group">
                   <div className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-sm font-mono text-gray-600 break-all pr-12">
                     {profile.apiKey}
@@ -170,33 +183,37 @@ export default function Profile() {
                     <Copy className="w-4 h-4 text-gray-400" />
                   </button>
                 </div>
-              </div>
+              ) : (
+                <Link to="/developer" className="inline-flex items-center gap-2 text-blue-700 font-bold text-sm hover:underline">
+                  Generate API Key in Developer Settings
+                </Link>
+              )}
             </div>
-          )}
+          </div>
 
           <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100">
             <h3 className="text-xl font-bold mb-6">KYC Verification</h3>
             <div className={cn(
               "flex items-center justify-between p-6 rounded-3xl border",
-              profile?.isVerified ? "bg-emerald-50 border-emerald-100" : "bg-amber-50 border-amber-100"
+              profile?.status === 'active' ? "bg-emerald-50 border-emerald-100" : "bg-amber-50 border-amber-100"
             )}>
               <div className="flex items-center gap-4">
                 <div className={cn(
                   "w-12 h-12 rounded-2xl flex items-center justify-center",
-                  profile?.isVerified ? "bg-emerald-600 text-white" : "bg-amber-600 text-white"
+                  profile?.status === 'active' ? "bg-emerald-600 text-white" : "bg-amber-600 text-white"
                 )}>
                   <Shield className="w-6 h-6" />
                 </div>
                 <div>
-                  <p className={cn("text-sm font-bold", profile?.isVerified ? "text-emerald-800" : "text-amber-800")}>
-                    {profile?.isVerified ? 'Verified Account' : 'Unverified Account'}
+                  <p className={cn("text-sm font-bold", profile?.status === 'active' ? "text-emerald-800" : "text-amber-800")}>
+                    {profile?.status === 'active' ? 'Verified Account' : 'Unverified Account'}
                   </p>
-                  <p className={cn("text-xs", profile?.isVerified ? "text-emerald-700" : "text-amber-700")}>
-                    {profile?.isVerified ? 'Your account is fully verified.' : 'Verify your BVN to increase your daily limits.'}
+                  <p className={cn("text-xs", profile?.status === 'active' ? "text-emerald-700" : "text-amber-700")}>
+                    {profile?.status === 'active' ? 'Your account is fully verified.' : 'Verify your BVN to increase your daily limits.'}
                   </p>
                 </div>
               </div>
-              {!profile?.isVerified && (
+              {profile?.status !== 'active' && (
                 <button className="bg-amber-600 text-white px-6 py-3 rounded-xl text-xs font-bold hover:bg-amber-700 transition-all">
                   Verify Now
                 </button>

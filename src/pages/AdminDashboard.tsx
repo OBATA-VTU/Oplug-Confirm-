@@ -22,7 +22,7 @@ export default function AdminDashboard() {
         const usersSnap = await getDocs(collection(db, 'users'));
         let totalBalance = 0;
         usersSnap.forEach(doc => {
-          totalBalance += doc.data().balance || 0;
+          totalBalance += doc.data().walletBalance || 0;
         });
 
         const transactionsSnap = await getDocs(query(collection(db, 'transactions'), orderBy('createdAt', 'desc')));

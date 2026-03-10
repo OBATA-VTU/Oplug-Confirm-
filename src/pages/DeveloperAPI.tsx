@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Code, Key, Globe, Copy, CheckCircle2, RefreshCw, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
@@ -150,10 +151,10 @@ export default function DeveloperAPI() {
                 <p className="text-sm text-blue-700 leading-relaxed mb-4">
                   Our API is designed to be simple and easy to integrate. View our full documentation for guides and code samples.
                 </p>
-                <a href="/docs" className="inline-flex items-center gap-2 text-sm font-bold text-blue-700 hover:underline">
+                <Link to="/developer/docs" className="inline-flex items-center gap-2 text-sm font-bold text-blue-700 hover:underline">
                   View Documentation
                   <ArrowRight className="w-4 h-4" />
-                </a>
+                </Link>
               </div>
             </div>
           </div>

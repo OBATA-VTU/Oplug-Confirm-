@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Landmark, User, Phone, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -16,13 +16,22 @@ export default function ProfileSetupModal() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
   const [skipped, setSkipped] = useState(false);
+
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        firstName: profile.firstName || '',
+        lastName: profile.lastName || '',
+        phone: profile.phone || '',
+      });
+    }
+  }, [profile]);
 
   if (!profile || profile.isProfileComplete || skipped) return null;
   
-  // If they already have virtual accounts, don't show the setup
-  if (profile.virtualAccounts && profile.virtualAccounts.length > 0) return null;
+  // If they already have a virtual account, don't show the setup
+  if (profile.virtualAccount && profile.virtualAccount.account_number) return null;
 
   const handleSkip = () => {
     setSkipped(true);
@@ -38,42 +47,40 @@ export default function ProfileSetupModal() {
     setError('');
 
     try {
-      // Generate PalmPay Account
+      // Generate PalmPay Account (Primary)
       const palmpayRes = await fundingService.generateVirtualAccount({
         email: profile.email,
-        reference: `INIT_PALM_${user?.uid}_${Date.now()}`,
+        reference: `VAG_${user?.uid}_${Date.now()}`,
         firstName: formData.firstName,
         lastName: formData.lastName,
         phone: formData.phone,
         bank: 'PALMPAY'
       });
 
-      // Generate 9PSB Account
-      const psbRes = await fundingService.generateVirtualAccount({
-        email: profile.email,
-        reference: `INIT_9PSB_${user?.uid}_${Date.now()}`,
+      if (!palmpayRes.status) {
+        throw new Error(palmpayRes.message || 'Failed to generate account');
+      }
+
+      const account = palmpayRes.data.account[0];
+
+      // Update Firestore with the new structure
+      await updateDoc(doc(db, 'users', profile.id), {
         firstName: formData.firstName,
         lastName: formData.lastName,
         phone: formData.phone,
-        bank: '9PSB'
-      });
-
-      const accounts = [];
-      if (palmpayRes.status) accounts.push(palmpayRes.data.account[0]);
-      if (psbRes.status) accounts.push(psbRes.data.account[0]);
-
-      // Update Firestore
-      await updateDoc(doc(db, 'users', profile.uid), {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        phone: formData.phone,
-        virtualAccounts: accounts,
+        virtualAccount: {
+          account_name: account.account_name,
+          account_number: account.account_number,
+          bank_id: account.bank_id,
+          bank_name: account.bank_name,
+          reference: account.reference
+        },
         isProfileComplete: true
       });
 
       setStep(3);
-    } catch (err) {
-      setError('Failed to generate accounts. Please try again.');
+    } catch (err: any) {
+      setError(err.message || 'Failed to generate accounts. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -176,7 +183,7 @@ export default function ProfileSetupModal() {
                 disabled={loading}
                 className="w-full bg-blue-700 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-blue-800 transition-all disabled:opacity-50"
               >
-                {loading ? 'Generating Accounts...' : 'Generate Virtual Accounts'}
+                {loading ? 'Generating Account...' : 'Generate Virtual Account'}
               </button>
             </div>
           )}
@@ -188,7 +195,7 @@ export default function ProfileSetupModal() {
               </div>
               <h2 className="text-2xl font-bold">Setup Complete!</h2>
               <p className="text-gray-500 text-sm">
-                Your virtual accounts have been generated successfully. You can now fund your wallet and start using Oplug.
+                Your virtual account has been generated successfully. You can now fund your wallet and start using Oplug.
               </p>
               <button 
                 onClick={() => window.location.reload()}

@@ -19,8 +19,29 @@ import GiftCard from './pages/GiftCard';
 import History from './pages/History';
 import DeveloperAPI from './pages/DeveloperAPI';
 import Profile from './pages/Profile';
+import Crypto from './pages/Crypto';
 import P2PTransfer from './pages/P2PTransfer';
+import About from './pages/About';
+import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
+import Contact from './pages/Contact';
+import Blog from './pages/Blog';
+import BlogPost from './pages/BlogPost';
+import Pricing from './pages/Pricing';
+import ApiDocsLayout from './pages/docs/ApiDocsLayout';
+import ApiDocsOverview from './pages/docs/ApiDocsOverview';
+import ApiDocsAuth from './pages/docs/ApiDocsAuth';
+import AirtimeApi from './pages/docs/AirtimeApi';
+import DataApi from './pages/docs/DataApi';
+import CableApi from './pages/docs/CableApi';
+import ElectricityApi from './pages/docs/ElectricityApi';
+import EducationApi from './pages/docs/EducationApi';
+import SmmApi from './pages/docs/SmmApi';
+import CryptoApi from './pages/docs/CryptoApi';
+import ServicesApi from './pages/docs/ServicesApi';
+import ApiSandbox from './pages/docs/ApiSandbox';
 import ProfileSetupModal from './components/ProfileSetupModal';
+import { useInactivityLogout } from './hooks/useInactivityLogout';
 
 import AdminDashboard from './pages/AdminDashboard';
 import AdminUsers from './pages/AdminUsers';
@@ -52,43 +73,73 @@ function ProtectedRoute({ children, adminOnly = false }: { children: React.React
   );
 }
 
+function AppContent() {
+  useInactivityLogout();
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/blog" element={<Blog />} />
+        <Route path="/blog/:id" element={<BlogPost />} />
+        <Route path="/pricing" element={<Pricing />} />
+        
+        <Route path="/developer/docs" element={<ApiDocsLayout />}>
+          <Route index element={<ApiDocsOverview />} />
+          <Route path="auth" element={<ApiDocsAuth />} />
+          <Route path="services" element={<ServicesApi />} />
+          <Route path="airtime" element={<AirtimeApi />} />
+          <Route path="data" element={<DataApi />} />
+          <Route path="cable" element={<CableApi />} />
+          <Route path="electricity" element={<ElectricityApi />} />
+          <Route path="education" element={<EducationApi />} />
+          <Route path="smm" element={<SmmApi />} />
+          <Route path="crypto" element={<CryptoApi />} />
+          <Route path="sandbox" element={<ApiSandbox />} />
+        </Route>
+        
+        <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/fund" element={<FundWallet />} />
+          <Route path="/airtime" element={<BuyAirtime />} />
+          <Route path="/data" element={<BuyData />} />
+          <Route path="/cable" element={<CableSubscription />} />
+          <Route path="/electricity" element={<ElectricityPayment />} />
+          <Route path="/education" element={<EducationPin />} />
+          <Route path="/smm" element={<SmmServices />} />
+          <Route path="/transfer" element={<P2PTransfer />} />
+          <Route path="/support" element={<Support />} />
+          <Route path="/refer" element={<ReferAndEarn />} />
+          <Route path="/giftcard" element={<GiftCard />} />
+          <Route path="/crypto" element={<Crypto />} />
+          <Route path="/history" element={<History />} />
+          <Route path="/developer" element={<DeveloperAPI />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/dashboard/terms" element={<Terms />} />
+        </Route>
+
+        <Route element={<ProtectedRoute adminOnly><Layout /></ProtectedRoute>}>
+          <Route path="/admin" element={<Navigate to="/admin/dashboard" />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/prices" element={<AdminPrices />} />
+          <Route path="/admin/settings" element={<AdminSettings />} />
+          <Route path="/admin/notifications" element={<AdminNotifications />} />
+        </Route>
+      </Routes>
+    </Router>
+  );
+}
+
 export default function App() {
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          
-          <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/fund" element={<FundWallet />} />
-            <Route path="/airtime" element={<BuyAirtime />} />
-            <Route path="/data" element={<BuyData />} />
-            <Route path="/cable" element={<CableSubscription />} />
-            <Route path="/electricity" element={<ElectricityPayment />} />
-            <Route path="/education" element={<EducationPin />} />
-            <Route path="/smm" element={<SmmServices />} />
-            <Route path="/transfer" element={<P2PTransfer />} />
-            <Route path="/support" element={<Support />} />
-            <Route path="/refer" element={<ReferAndEarn />} />
-            <Route path="/giftcard" element={<GiftCard />} />
-            <Route path="/history" element={<History />} />
-            <Route path="/developer" element={<DeveloperAPI />} />
-            <Route path="/profile" element={<Profile />} />
-          </Route>
-
-          <Route element={<ProtectedRoute adminOnly><Layout /></ProtectedRoute>}>
-            <Route path="/admin" element={<Navigate to="/admin/dashboard" />} />
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            <Route path="/admin/users" element={<AdminUsers />} />
-            <Route path="/admin/prices" element={<AdminPrices />} />
-            <Route path="/admin/settings" element={<AdminSettings />} />
-            <Route path="/admin/notifications" element={<AdminNotifications />} />
-          </Route>
-        </Routes>
-      </Router>
+      <AppContent />
     </AuthProvider>
   );
 }

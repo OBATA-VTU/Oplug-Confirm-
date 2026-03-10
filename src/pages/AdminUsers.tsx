@@ -35,7 +35,8 @@ export default function AdminUsers() {
 
   const filteredUsers = users.filter(user => 
     user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.displayName?.toLowerCase().includes(searchTerm.toLowerCase())
+    user.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.username?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading) return <div>Loading users...</div>;
@@ -78,17 +79,17 @@ export default function AdminUsers() {
                         <User className="w-5 h-5 text-gray-500" />
                       </div>
                       <div>
-                        <p className="text-sm font-bold">{user.displayName || 'No Name'}</p>
+                        <p className="text-sm font-bold">{user.fullName || user.username || 'No Name'}</p>
                         <p className="text-xs text-gray-500">{user.email}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <p className="text-sm font-bold">₦{user.balance?.toLocaleString() || '0.00'}</p>
+                    <p className="text-sm font-bold">₦{user.walletBalance?.toLocaleString() || '0.00'}</p>
                   </td>
                   <td className="px-6 py-4">
                     <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-[10px] font-bold uppercase tracking-wider">
-                      {user.package || 'User'}
+                      {user.role || 'User'}
                     </span>
                   </td>
                   <td className="px-6 py-4">

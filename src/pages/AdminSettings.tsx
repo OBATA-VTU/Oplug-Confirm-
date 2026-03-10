@@ -1,25 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Save, Globe, Bell, ShieldCheck, DollarSign, Image as ImageIcon, Plus, Trash2 } from 'lucide-react';
+import { Save, Globe, Shield, Bell, Image as ImageIcon, Plus, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 export default function AdminSettings() {
-  const [settings, setSettings] = useState({
+  const [settings, setSettings] = useState<any>({
     siteName: 'Oplug',
-    siteDescription: 'Fastest VTU Platform in Nigeria',
-    supportEmail: 'support@oplug.com',
-    supportPhone: '08142452729',
-    whatsappGroup: 'https://chat.whatsapp.com/your-group-link',
-    minFunding: 100,
-    referralBonus: 50,
-    maintenanceMode: false,
-    announcement: 'Welcome to Oplug! Enjoy instant delivery on all services.',
-    supportedLogos: [
-      'https://upload.wikimedia.org/wikipedia/commons/4/4b/MTN_Logo.svg',
-      'https://upload.wikimedia.org/wikipedia/en/9/9f/Airtel_logo.svg',
-      'https://upload.wikimedia.org/wikipedia/commons/b/b0/Glo_Logo.svg'
-    ]
+    siteDescription: 'The most reliable VTU platform in Nigeria.',
+    announcement: '',
+    supportedLogos: [],
+    contactEmail: '',
+    contactPhone: '',
+    whatsappNumber: '',
+    referralBonus: 0,
+    firstDepositBonus: 0,
+    minFundingAmount: 100,
+    fundingFee: 50,
+    heroImage: 'https://illustrations.popsy.co/blue/woman-with-smartphone.svg',
+    fastDeliveryImage: 'https://illustrations.popsy.co/blue/man-on-rocket.svg',
+    resellerImage: 'https://illustrations.popsy.co/blue/shaking-hands.svg',
+    developerImage: 'https://illustrations.popsy.co/white/web-design.svg',
+    fundingImage: 'https://illustrations.popsy.co/blue/payment-processed.svg',
+    supportImage: 'https://illustrations.popsy.co/blue/customer-support.svg'
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -39,7 +42,6 @@ export default function AdminSettings() {
         setLoading(false);
       }
     };
-
     fetchSettings();
   }, []);
 
@@ -47,24 +49,26 @@ export default function AdminSettings() {
     setSaving(true);
     setMessage('');
     try {
-      await setDoc(doc(db, 'settings', 'general'), settings);
-      setMessage('Settings saved successfully!');
+      await setDoc(doc(db, 'settings', 'general'), settings, { merge: true });
+      setMessage('Settings updated successfully!');
     } catch (err) {
-      setMessage('Failed to save settings.');
+      setMessage('Failed to update settings.');
     } finally {
       setSaving(false);
     }
   };
 
   const addLogo = () => {
-    if (newLogo && !settings.supportedLogos.includes(newLogo)) {
+    if (newLogo) {
       setSettings({ ...settings, supportedLogos: [...settings.supportedLogos, newLogo] });
       setNewLogo('');
     }
   };
 
-  const removeLogo = (url: string) => {
-    setSettings({ ...settings, supportedLogos: settings.supportedLogos.filter(l => l !== url) });
+  const removeLogo = (index: number) => {
+    const newLogos = [...settings.supportedLogos];
+    newLogos.splice(index, 1);
+    setSettings({ ...settings, supportedLogos: newLogos });
   };
 
   if (loading) return <div>Loading settings...</div>;
@@ -72,7 +76,7 @@ export default function AdminSettings() {
   return (
     <div className="space-y-8 max-w-5xl">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Website Settings</h1>
+        <h1 className="text-3xl font-bold tracking-tight">System Settings</h1>
         <button 
           onClick={handleSave}
           disabled={saving}
@@ -93,10 +97,11 @@ export default function AdminSettings() {
       )}
 
       <div className="grid md:grid-cols-2 gap-8">
+        {/* General Settings */}
         <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm space-y-6">
           <h3 className="text-xl font-bold flex items-center gap-2">
             <Globe className="w-5 h-5 text-blue-700" />
-            General Info
+            General
           </h3>
           <div className="space-y-4">
             <div>
@@ -104,69 +109,53 @@ export default function AdminSettings() {
               <input 
                 type="text" 
                 value={settings.siteName}
-                onChange={(e) => setSettings({...settings, siteName: e.target.value})}
+                onChange={(e) => setSettings({ ...settings, siteName: e.target.value })}
                 className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
             <div>
               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">Site Description</label>
               <textarea 
+                rows={3}
                 value={settings.siteDescription}
-                onChange={(e) => setSettings({...settings, siteDescription: e.target.value})}
-                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none h-24 resize-none"
+                onChange={(e) => setSettings({ ...settings, siteDescription: e.target.value })}
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
               />
             </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm space-y-6">
-          <h3 className="text-xl font-bold flex items-center gap-2">
-            <Bell className="w-5 h-5 text-purple-700" />
-            Announcements
-          </h3>
-          <div className="space-y-4">
             <div>
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">Dashboard Notice</label>
-              <textarea 
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">Announcement (Dashboard)</label>
+              <input 
+                type="text" 
                 value={settings.announcement}
-                onChange={(e) => setSettings({...settings, announcement: e.target.value})}
-                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none h-24 resize-none"
-                placeholder="Enter text to show on user dashboard..."
+                onChange={(e) => setSettings({ ...settings, announcement: e.target.value })}
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
               />
-            </div>
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
-              <div>
-                <p className="text-sm font-bold">Maintenance Mode</p>
-                <p className="text-xs text-gray-500">Disable site for users</p>
-              </div>
-              <button 
-                onClick={() => setSettings({...settings, maintenanceMode: !settings.maintenanceMode})}
-                className={cn(
-                  "w-12 h-6 rounded-full transition-colors relative",
-                  settings.maintenanceMode ? "bg-red-500" : "bg-gray-300"
-                )}
-              >
-                <div className={cn(
-                  "absolute top-1 w-4 h-4 bg-white rounded-full transition-all",
-                  settings.maintenanceMode ? "left-7" : "left-1"
-                )} />
-              </button>
             </div>
           </div>
         </div>
 
+        {/* Financial Settings */}
         <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm space-y-6">
           <h3 className="text-xl font-bold flex items-center gap-2">
-            <DollarSign className="w-5 h-5 text-emerald-700" />
-            Financial Rules
+            <Shield className="w-5 h-5 text-emerald-700" />
+            Financials
           </h3>
-          <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">Min Funding Amount (₦)</label>
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">Min Funding (₦)</label>
               <input 
                 type="number" 
-                value={settings.minFunding}
-                onChange={(e) => setSettings({...settings, minFunding: Number(e.target.value)})}
+                value={settings.minFundingAmount}
+                onChange={(e) => setSettings({ ...settings, minFundingAmount: Number(e.target.value) })}
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">Funding Fee (₦)</label>
+              <input 
+                type="number" 
+                value={settings.fundingFee}
+                onChange={(e) => setSettings({ ...settings, fundingFee: Number(e.target.value) })}
                 className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
@@ -175,83 +164,154 @@ export default function AdminSettings() {
               <input 
                 type="number" 
                 value={settings.referralBonus}
-                onChange={(e) => setSettings({...settings, referralBonus: Number(e.target.value)})}
+                onChange={(e) => setSettings({ ...settings, referralBonus: Number(e.target.value) })}
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">1st Deposit Bonus (₦)</label>
+              <input 
+                type="number" 
+                value={settings.firstDepositBonus}
+                onChange={(e) => setSettings({ ...settings, firstDepositBonus: Number(e.target.value) })}
                 className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
           </div>
         </div>
 
+        {/* Support & Contact */}
         <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm space-y-6">
           <h3 className="text-xl font-bold flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-orange-700" />
-            Support Contact
+            <Bell className="w-5 h-5 text-purple-700" />
+            Support & Contact
           </h3>
           <div className="space-y-4">
+            <div>
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">WhatsApp Number</label>
+              <input 
+                type="text" 
+                value={settings.whatsappNumber}
+                onChange={(e) => setSettings({ ...settings, whatsappNumber: e.target.value })}
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
             <div>
               <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">Support Email</label>
               <input 
                 type="email" 
-                value={settings.supportEmail}
-                onChange={(e) => setSettings({...settings, supportEmail: e.target.value})}
-                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">Support WhatsApp</label>
-              <input 
-                type="text" 
-                value={settings.supportPhone}
-                onChange={(e) => setSettings({...settings, supportPhone: e.target.value})}
-                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">WhatsApp Group Link</label>
-              <input 
-                type="text" 
-                value={settings.whatsappGroup}
-                onChange={(e) => setSettings({...settings, whatsappGroup: e.target.value})}
+                value={settings.contactEmail}
+                onChange={(e) => setSettings({ ...settings, contactEmail: e.target.value })}
                 className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm space-y-6 col-span-full">
+        {/* Partner Logos */}
+        <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm space-y-6">
           <h3 className="text-xl font-bold flex items-center gap-2">
-            <ImageIcon className="w-5 h-5 text-pink-700" />
-            Supported Partner Logos (SVG URLs)
+            <ImageIcon className="w-5 h-5 text-orange-700" />
+            Partner Logos
           </h3>
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div className="flex gap-2">
               <input 
                 type="text" 
                 value={newLogo}
                 onChange={(e) => setNewLogo(e.target.value)}
-                placeholder="Enter SVG logo URL..."
+                placeholder="Logo URL (SVG/PNG)"
                 className="flex-1 bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
               />
               <button 
                 onClick={addLogo}
-                className="bg-blue-700 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-blue-800 transition-all"
+                className="bg-blue-700 text-white p-3 rounded-xl hover:bg-blue-800 transition-all"
               >
-                <Plus className="w-5 h-5" />
-                Add Logo
+                <Plus className="w-6 h-6" />
               </button>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
-              {settings.supportedLogos.map((logo, i) => (
-                <div key={i} className="relative group bg-gray-50 p-4 rounded-2xl border border-gray-100 flex items-center justify-center h-24">
-                  <img src={logo} alt="Partner Logo" className="max-h-full max-w-full grayscale opacity-50" />
+            <div className="flex flex-wrap gap-3">
+              {settings.supportedLogos?.map((logo: string, i: number) => (
+                <div key={i} className="relative group">
+                  <img src={logo} alt="Logo" className="h-8 bg-gray-50 p-1 rounded border border-gray-100" />
                   <button 
-                    onClick={() => removeLogo(logo)}
-                    className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all"
+                    onClick={() => removeLogo(i)}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                   >
-                    <Trash2 className="w-3 h-3" />
+                    <X className="w-3 h-3" />
                   </button>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Homepage Images */}
+        <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm space-y-6 md:col-span-2">
+          <h3 className="text-xl font-bold flex items-center gap-2">
+            <ImageIcon className="w-5 h-5 text-blue-700" />
+            Homepage Illustrations (SVG/PNG URLs)
+          </h3>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">Hero Image (Woman with Phone)</label>
+              <input 
+                type="text" 
+                value={settings.heroImage || ''}
+                onChange={(e) => setSettings({ ...settings, heroImage: e.target.value })}
+                placeholder="https://illustrations.popsy.co/blue/woman-with-smartphone.svg"
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">Fast Delivery (Man on Rocket)</label>
+              <input 
+                type="text" 
+                value={settings.fastDeliveryImage || ''}
+                onChange={(e) => setSettings({ ...settings, fastDeliveryImage: e.target.value })}
+                placeholder="https://illustrations.popsy.co/blue/man-on-rocket.svg"
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">Reseller (Shaking Hands)</label>
+              <input 
+                type="text" 
+                value={settings.resellerImage || ''}
+                onChange={(e) => setSettings({ ...settings, resellerImage: e.target.value })}
+                placeholder="https://illustrations.popsy.co/blue/shaking-hands.svg"
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">Developer (Web Design)</label>
+              <input 
+                type="text" 
+                value={settings.developerImage || ''}
+                onChange={(e) => setSettings({ ...settings, developerImage: e.target.value })}
+                placeholder="https://illustrations.popsy.co/white/web-design.svg"
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">Funding (Payment Processed)</label>
+              <input 
+                type="text" 
+                value={settings.fundingImage || ''}
+                onChange={(e) => setSettings({ ...settings, fundingImage: e.target.value })}
+                placeholder="https://illustrations.popsy.co/blue/payment-processed.svg"
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">Support (Customer Support)</label>
+              <input 
+                type="text" 
+                value={settings.supportImage || ''}
+                onChange={(e) => setSettings({ ...settings, supportImage: e.target.value })}
+                placeholder="https://illustrations.popsy.co/blue/customer-support.svg"
+                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              />
             </div>
           </div>
         </div>
