@@ -40,11 +40,13 @@ const navItems = [
   { name: 'SMM Booster', path: '/smm', icon: ShoppingCart },
   { name: 'P2P Transfer', path: '/transfer', icon: Repeat },
   { name: 'History', path: '/history', icon: History },
+];
+
+const secondaryItems = [
+  { name: 'Profile Settings', path: '/profile', icon: User },
   { name: 'Refer & Earn', path: '/refer', icon: Users },
-  { name: 'Gift Card', path: '/giftcard', icon: Gift },
   { name: 'Developer API', path: '/developer', icon: Code },
-  { name: 'Support', path: '/support', icon: Headphones },
-  { name: 'Profile', path: '/profile', icon: User },
+  { name: 'Support Center', path: '/support', icon: Headphones },
 ];
 
 export default function Layout() {
@@ -105,6 +107,29 @@ export default function Layout() {
                   {item.name}
                 </Link>
               ))}
+
+              <div className="h-px bg-white/5 my-6 mx-4" />
+              <p className="px-4 text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mb-4">Account & Help</p>
+              
+              {secondaryItems.map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setIsSidebarOpen(false)}
+                  className={cn(
+                    "flex items-center gap-4 px-4 py-3.5 rounded-2xl text-sm font-semibold transition-all duration-200 group",
+                    location.pathname === item.path 
+                      ? "bg-white/10 text-white shadow-lg" 
+                      : "text-white/60 hover:bg-white/5 hover:text-white"
+                  )}
+                >
+                  <item.icon className={cn(
+                    "w-5 h-5 transition-colors",
+                    location.pathname === item.path ? "text-white" : "text-white/40 group-hover:text-white"
+                  )} />
+                  {item.name}
+                </Link>
+              ))}
               
               {profile?.isAdmin && (
                 <>
@@ -125,26 +150,15 @@ export default function Layout() {
                   </Link>
                 </>
               )}
-              <Link
-                to="/dashboard/terms"
-                onClick={() => setIsSidebarOpen(false)}
-                className={cn(
-                  "flex items-center gap-4 px-4 py-3.5 rounded-2xl text-sm font-semibold transition-all duration-200 group",
-                  location.pathname === '/dashboard/terms' 
-                    ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" 
-                    : "text-white/60 hover:bg-white/5 hover:text-white"
-                )}
-              >
-                <Shield className={cn(
-                  "w-5 h-5 transition-colors",
-                  location.pathname === '/dashboard/terms' ? "text-white" : "text-white/40 group-hover:text-white"
-                )} />
-                Terms & Privacy
-              </Link>
             </div>
           </nav>
 
           <div className="p-6 border-t border-white/5">
+            <div className="flex items-center justify-center gap-6 mb-6">
+              <Link to="/terms" className="text-[10px] font-bold text-white/20 hover:text-white transition-colors uppercase tracking-widest">Terms</Link>
+              <Link to="/privacy" className="text-[10px] font-bold text-white/20 hover:text-white transition-colors uppercase tracking-widest">Privacy</Link>
+              <Link to="/contact" className="text-[10px] font-bold text-white/20 hover:text-white transition-colors uppercase tracking-widest">Contact</Link>
+            </div>
             <div className="bg-white/5 rounded-[2rem] p-4 mb-6">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-xs font-bold">

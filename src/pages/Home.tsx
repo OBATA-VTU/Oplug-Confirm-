@@ -6,7 +6,7 @@ import {
   ShieldCheck, Zap as ZapIcon, Users, ArrowRight, 
   CheckCircle2, MessageSquare, Ticket, HelpCircle,
   Star, Quote, Globe, Code, Layout, Shield, CreditCard, Landmark, Wallet,
-  LayoutDashboard
+  LayoutDashboard, Menu, X
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { doc, getDoc } from 'firebase/firestore';
@@ -16,6 +16,7 @@ import { useAuth } from '../context/AuthContext';
 
 export default function Home() {
   const [settings, setSettings] = useState<any>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -38,10 +39,12 @@ export default function Home() {
       <nav className="h-24 border-b border-gray-100 bg-white/80 backdrop-blur-md sticky top-0 z-[100] px-6">
         <div className="container mx-auto h-full flex items-center justify-between">
           <Logo />
+          
+          {/* Desktop Nav */}
           <div className="hidden lg:flex items-center gap-10">
             <Link to="/pricing" className="text-sm font-bold text-gray-500 hover:text-blue-700 transition-colors">Pricing</Link>
             <Link to="/blog" className="text-sm font-bold text-gray-500 hover:text-blue-700 transition-colors">Blog</Link>
-            <Link to="/about" className="text-sm font-bold text-gray-500 hover:text-blue-700 transition-colors">About</Link>
+            <Link to="/about" className="text-sm font-bold text-gray-500 hover:text-blue-700 transition-colors">About Us</Link>
             <Link to="/developer" className="text-sm font-bold text-gray-500 hover:text-blue-700 transition-colors">Developers</Link>
             
             {user ? (
@@ -58,12 +61,42 @@ export default function Home() {
               </>
             )}
           </div>
-          {user ? (
-            <Link to="/dashboard" className="lg:hidden bg-blue-700 text-white px-6 py-2 rounded-xl font-bold text-sm">Dashboard</Link>
-          ) : (
-            <Link to="/login" className="lg:hidden bg-blue-700 text-white px-6 py-2 rounded-xl font-bold text-sm">Login</Link>
-          )}
+
+          {/* Mobile Menu Toggle */}
+          <button 
+            className="lg:hidden p-2 text-gray-600"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+          >
+            {isMenuOpen ? <X className="w-8 h-8" /> : <Menu className="w-8 h-8" />}
+          </button>
         </div>
+
+        {/* Mobile Nav Overlay */}
+        {isMenuOpen && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="absolute top-24 left-0 w-full bg-white border-b border-gray-100 p-6 flex flex-col gap-6 lg:hidden shadow-xl z-50"
+          >
+            <Link to="/pricing" onClick={() => setIsMenuOpen(false)} className="text-lg font-bold text-gray-900">Pricing</Link>
+            <Link to="/blog" onClick={() => setIsMenuOpen(false)} className="text-lg font-bold text-gray-900">Blog</Link>
+            <Link to="/about" onClick={() => setIsMenuOpen(false)} className="text-lg font-bold text-gray-900">About Us</Link>
+            <Link to="/developer" onClick={() => setIsMenuOpen(false)} className="text-lg font-bold text-gray-900">Developers</Link>
+            <div className="h-px bg-gray-100 my-2" />
+            {user ? (
+              <Link to="/dashboard" onClick={() => setIsMenuOpen(false)} className="bg-blue-700 text-white px-8 py-4 rounded-2xl font-bold text-center">
+                Go to Dashboard
+              </Link>
+            ) : (
+              <div className="flex flex-col gap-4">
+                <Link to="/login" onClick={() => setIsMenuOpen(false)} className="text-center font-bold text-blue-700 py-2">Login</Link>
+                <Link to="/signup" onClick={() => setIsMenuOpen(false)} className="bg-blue-700 text-white px-8 py-4 rounded-2xl font-bold text-center">
+                  Create Account
+                </Link>
+              </div>
+            )}
+          </motion.div>
+        )}
       </nav>
 
       {/* Hero Section */}
@@ -419,7 +452,7 @@ export default function Home() {
         <div className="container mx-auto px-6">
           <div className="grid md:grid-cols-4 gap-12 mb-20">
             <div className="col-span-2 space-y-6">
-              <Logo className="invert brightness-0" />
+              <Logo variant="white" />
               <p className="text-gray-400 max-w-sm leading-relaxed">
                 The most reliable VTU platform in Nigeria. We provide instant delivery of data, airtime, and bill payments at wholesale prices.
               </p>

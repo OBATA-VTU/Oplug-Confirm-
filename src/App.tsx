@@ -1,6 +1,7 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { useEffect } from 'react';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
@@ -73,65 +74,91 @@ function ProtectedRoute({ children, adminOnly = false }: { children: React.React
   );
 }
 
-function AppContent() {
+function AppRoutes() {
   useInactivityLogout();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Save last path
+  useEffect(() => {
+    if (location.pathname !== '/login' && location.pathname !== '/signup' && location.pathname !== '/') {
+      localStorage.setItem('lastPath', location.pathname);
+    }
+  }, [location]);
+
+  // Restore last path on mount if at root
+  useEffect(() => {
+    const lastPath = localStorage.getItem('lastPath');
+    if (window.location.pathname === '/' && lastPath && lastPath !== '/') {
+      // Only redirect if we are at the root and have a saved path
+      // This helps with reloads on subpages if the server redirects to root
+      // navigate(lastPath);
+    }
+  }, []);
+
+  return (
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
+      <Route path="/about" element={<About />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
+      <Route path="/contact" element={<Contact />} />
+      <Route path="/blog" element={<Blog />} />
+      <Route path="/blog/:id" element={<BlogPost />} />
+      <Route path="/pricing" element={<Pricing />} />
+      
+      <Route path="/developer/docs" element={<ApiDocsLayout />}>
+        <Route index element={<ApiDocsOverview />} />
+        <Route path="auth" element={<ApiDocsAuth />} />
+        <Route path="services" element={<ServicesApi />} />
+        <Route path="airtime" element={<AirtimeApi />} />
+        <Route path="data" element={<DataApi />} />
+        <Route path="cable" element={<CableApi />} />
+        <Route path="electricity" element={<ElectricityApi />} />
+        <Route path="education" element={<EducationApi />} />
+        <Route path="smm" element={<SmmApi />} />
+        <Route path="crypto" element={<CryptoApi />} />
+        <Route path="sandbox" element={<ApiSandbox />} />
+      </Route>
+      
+      <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/fund" element={<FundWallet />} />
+        <Route path="/airtime" element={<BuyAirtime />} />
+        <Route path="/data" element={<BuyData />} />
+        <Route path="/cable" element={<CableSubscription />} />
+        <Route path="/electricity" element={<ElectricityPayment />} />
+        <Route path="/education" element={<EducationPin />} />
+        <Route path="/smm" element={<SmmServices />} />
+        <Route path="/transfer" element={<P2PTransfer />} />
+        <Route path="/support" element={<Support />} />
+        <Route path="/refer" element={<ReferAndEarn />} />
+        <Route path="/giftcard" element={<GiftCard />} />
+        <Route path="/crypto" element={<Crypto />} />
+        <Route path="/history" element={<History />} />
+        <Route path="/developer" element={<DeveloperAPI />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/dashboard/terms" element={<Terms />} />
+      </Route>
+
+      <Route element={<ProtectedRoute adminOnly><Layout /></ProtectedRoute>}>
+        <Route path="/admin" element={<Navigate to="/admin/dashboard" />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/admin/users" element={<AdminUsers />} />
+        <Route path="/admin/prices" element={<AdminPrices />} />
+        <Route path="/admin/settings" element={<AdminSettings />} />
+        <Route path="/admin/notifications" element={<AdminNotifications />} />
+      </Route>
+    </Routes>
+  );
+}
+
+function AppContent() {
   return (
     <Router>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/terms" element={<Terms />} />
-        <Route path="/privacy" element={<Privacy />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="/blog" element={<Blog />} />
-        <Route path="/blog/:id" element={<BlogPost />} />
-        <Route path="/pricing" element={<Pricing />} />
-        
-        <Route path="/developer/docs" element={<ApiDocsLayout />}>
-          <Route index element={<ApiDocsOverview />} />
-          <Route path="auth" element={<ApiDocsAuth />} />
-          <Route path="services" element={<ServicesApi />} />
-          <Route path="airtime" element={<AirtimeApi />} />
-          <Route path="data" element={<DataApi />} />
-          <Route path="cable" element={<CableApi />} />
-          <Route path="electricity" element={<ElectricityApi />} />
-          <Route path="education" element={<EducationApi />} />
-          <Route path="smm" element={<SmmApi />} />
-          <Route path="crypto" element={<CryptoApi />} />
-          <Route path="sandbox" element={<ApiSandbox />} />
-        </Route>
-        
-        <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/fund" element={<FundWallet />} />
-          <Route path="/airtime" element={<BuyAirtime />} />
-          <Route path="/data" element={<BuyData />} />
-          <Route path="/cable" element={<CableSubscription />} />
-          <Route path="/electricity" element={<ElectricityPayment />} />
-          <Route path="/education" element={<EducationPin />} />
-          <Route path="/smm" element={<SmmServices />} />
-          <Route path="/transfer" element={<P2PTransfer />} />
-          <Route path="/support" element={<Support />} />
-          <Route path="/refer" element={<ReferAndEarn />} />
-          <Route path="/giftcard" element={<GiftCard />} />
-          <Route path="/crypto" element={<Crypto />} />
-          <Route path="/history" element={<History />} />
-          <Route path="/developer" element={<DeveloperAPI />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/dashboard/terms" element={<Terms />} />
-        </Route>
-
-        <Route element={<ProtectedRoute adminOnly><Layout /></ProtectedRoute>}>
-          <Route path="/admin" element={<Navigate to="/admin/dashboard" />} />
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          <Route path="/admin/users" element={<AdminUsers />} />
-          <Route path="/admin/prices" element={<AdminPrices />} />
-          <Route path="/admin/settings" element={<AdminSettings />} />
-          <Route path="/admin/notifications" element={<AdminNotifications />} />
-        </Route>
-      </Routes>
+      <AppRoutes />
     </Router>
   );
 }
