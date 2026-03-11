@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { 
   Wifi, Smartphone, CreditCard, CheckCircle2, 
@@ -10,9 +11,12 @@ import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/firebase';
 import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { cn } from '../lib/utils';
+import PinModal from '../components/PinModal';
+import ProcessingModal from '../components/ProcessingModal';
 
 export default function BuyData() {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const [services, setServices] = useState<any[]>([]);
   const [filteredPlans, setFilteredPlans] = useState<any[]>([]);
   const [network, setNetwork] = useState('');
@@ -24,6 +28,12 @@ export default function BuyData() {
   const [saveBeneficiary, setSaveBeneficiary] = useState(false);
   const [beneficiaryName, setBeneficiaryName] = useState('');
   const [showBeneficiaries, setShowBeneficiaries] = useState(false);
+  
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [showSetupPinModal, setShowSetupPinModal] = useState(false);
+  const [showProcessing, setShowProcessing] = useState(false);
+  const [processStatus, setProcessStatus] = useState<'processing' | 'success' | 'error'>('processing');
+  const [processMessage, setProcessMessage] = useState('');
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -63,8 +73,19 @@ export default function BuyData() {
       return;
     }
 
+    if (!profile?.isPinSet) {
+      setShowSetupPinModal(true);
+      return;
+    }
+
+    setShowPinModal(true);
+  };
+
+  const executePurchase = async () => {
     setLoading(true);
     setMessage({ type: '', text: '' });
+    setShowProcessing(true);
+    setProcessStatus('processing');
 
     try {
       const response = await vtuService.buyData({
@@ -73,7 +94,8 @@ export default function BuyData() {
       });
 
       if (response.status === 'success') {
-        setMessage({ type: 'success', text: response.message });
+        setProcessStatus('success');
+        setProcessMessage(response.message);
         
         if (saveBeneficiary && beneficiaryName && user) {
           const userRef = doc(db, 'users', user.uid);
@@ -91,10 +113,12 @@ export default function BuyData() {
         setBeneficiaryName('');
         setSaveBeneficiary(false);
       } else {
-        setMessage({ type: 'error', text: response.message || 'Transaction failed' });
+        setProcessStatus('error');
+        setProcessMessage(response.message || 'Transaction failed');
       }
     } catch (error: any) {
-      setMessage({ type: 'error', text: error.response?.data?.message || 'An error occurred' });
+      setProcessStatus('error');
+      setProcessMessage(error.response?.data?.message || 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -354,6 +378,30 @@ export default function BuyData() {
           </div>
         </div>
       </div>
+      
+      <PinModal 
+        isOpen={showPinModal}
+        onClose={() => setShowPinModal(false)}
+        onSuccess={executePurchase}
+        correctPin={profile?.transactionPin}
+        mode="verify"
+      />
+
+      <PinModal 
+        isOpen={showSetupPinModal}
+        onClose={() => setShowSetupPinModal(false)}
+        onSuccess={() => navigate('/profile')} // Redirect to profile to set PIN
+        mode="setup"
+        title="Setup Transaction PIN"
+        description="You need to set a transaction PIN before you can make purchases. Go to your profile to set it up."
+      />
+
+      <ProcessingModal 
+        isOpen={showProcessing}
+        status={processStatus}
+        message={processMessage}
+        onClose={() => setShowProcessing(false)}
+      />
     </div>
   );
 }

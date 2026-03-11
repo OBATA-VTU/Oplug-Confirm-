@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider } from '../lib/firebase';
 import { User, Lock, Eye, EyeOff, Chrome, LogIn } from 'lucide-react';
+import Logo from '../components/Logo';
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
@@ -59,12 +60,7 @@ export default function Login() {
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md bg-white rounded-[40px] p-8 shadow-xl shadow-gray-200/50 border border-gray-100">
         <div className="flex flex-col items-center mb-8">
-          <div className="flex items-center gap-2 mb-6">
-            <div className="w-10 h-10 bg-blue-700 rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold text-2xl">O</span>
-            </div>
-            <span className="text-3xl font-bold text-blue-700">OPLUG</span>
-          </div>
+          <Logo className="mb-6 scale-125" />
           <h1 className="text-2xl font-bold text-gray-800">Login</h1>
         </div>
 

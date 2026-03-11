@@ -1,9 +1,60 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import PinModal from '../components/PinModal';
+import ProcessingModal from '../components/ProcessingModal';
 
 export default function P2PTransfer() {
+  const { profile } = useAuth();
+  const navigate = useNavigate();
   const [phone, setPhone] = useState('');
   const [amount, setAmount] = useState('');
   const [remark, setRemark] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  // PIN & Processing states
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [showSetupPinModal, setShowSetupPinModal] = useState(false);
+  const [showProcessing, setShowProcessing] = useState(false);
+  const [processStatus, setProcessStatus] = useState<'processing' | 'success' | 'error'>('processing');
+  const [processMessage, setProcessMessage] = useState('');
+
+  const handleTransfer = () => {
+    if (!phone || !amount) {
+      alert('Please fill all fields');
+      return;
+    }
+
+    if (!profile?.isPinSet) {
+      setShowSetupPinModal(true);
+      return;
+    }
+
+    setShowPinModal(true);
+  };
+
+  const executeTransfer = async () => {
+    setLoading(true);
+    setShowProcessing(true);
+    setProcessStatus('processing');
+    setProcessMessage('Processing your transfer...');
+
+    try {
+      // Mock transfer logic
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      setProcessStatus('success');
+      setProcessMessage(`Successfully transferred ₦${amount} to ${phone}`);
+      setPhone('');
+      setAmount('');
+      setRemark('');
+    } catch (error) {
+      setProcessStatus('error');
+      setProcessMessage('Transfer failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -47,11 +98,44 @@ export default function P2PTransfer() {
             />
           </div>
 
-          <button className="w-full bg-blue-700 text-white font-bold py-4 rounded-xl hover:bg-blue-800 transition-colors shadow-lg shadow-blue-100">
-            Transfer
+          <button 
+            onClick={handleTransfer}
+            disabled={loading}
+            className="w-full bg-blue-700 text-white font-bold py-4 rounded-xl hover:bg-blue-800 transition-colors shadow-lg shadow-blue-100 disabled:opacity-50"
+          >
+            {loading ? 'Processing...' : 'Transfer'}
           </button>
         </div>
       </div>
+
+      {/* PIN Verification Modal */}
+      <PinModal 
+        isOpen={showPinModal}
+        onClose={() => setShowPinModal(false)}
+        onSuccess={executeTransfer}
+        correctPin={profile?.transactionPin}
+        mode="verify"
+        title="Verify Transfer"
+        description={`Enter your 5-digit PIN to authorize ₦${amount} transfer to ${phone}`}
+      />
+
+      {/* Setup PIN Modal */}
+      <PinModal 
+        isOpen={showSetupPinModal}
+        onClose={() => setShowSetupPinModal(false)}
+        onSuccess={() => navigate('/profile')}
+        mode="verify"
+        title="PIN Required"
+        description="You need to set a transaction PIN before you can make transfers. Would you like to set it now?"
+      />
+
+      {/* Processing Modal */}
+      <ProcessingModal 
+        isOpen={showProcessing}
+        onClose={() => setShowProcessing(false)}
+        status={processStatus}
+        message={processMessage}
+      />
     </div>
   );
 }

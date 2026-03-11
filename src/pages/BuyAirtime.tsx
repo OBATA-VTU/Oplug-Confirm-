@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { 
   Smartphone, Phone, CreditCard, CheckCircle2, 
@@ -11,9 +12,12 @@ import { db } from '../lib/firebase';
 import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { cn } from '../lib/utils';
 import { Link } from 'react-router-dom';
+import PinModal from '../components/PinModal';
+import ProcessingModal from '../components/ProcessingModal';
 
 export default function BuyAirtime() {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const [services, setServices] = useState<any[]>([]);
   const [selectedService, setSelectedService] = useState('');
   const [amount, setAmount] = useState('');
@@ -23,6 +27,13 @@ export default function BuyAirtime() {
   const [saveBeneficiary, setSaveBeneficiary] = useState(false);
   const [beneficiaryName, setBeneficiaryName] = useState('');
   const [showBeneficiaries, setShowBeneficiaries] = useState(false);
+
+  // PIN & Processing states
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [showSetupPinModal, setShowSetupPinModal] = useState(false);
+  const [showProcessing, setShowProcessing] = useState(false);
+  const [processStatus, setProcessStatus] = useState<'processing' | 'success' | 'error'>('processing');
+  const [processMessage, setProcessMessage] = useState('');
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -44,8 +55,21 @@ export default function BuyAirtime() {
       return;
     }
 
+    // Check if PIN is set
+    if (!profile?.isPinSet) {
+      setShowSetupPinModal(true);
+      return;
+    }
+
+    setShowPinModal(true);
+  };
+
+  const executePurchase = async () => {
     setLoading(true);
     setMessage({ type: '', text: '' });
+    setShowProcessing(true);
+    setProcessStatus('processing');
+    setProcessMessage('Processing your airtime purchase...');
 
     try {
       const response = await vtuService.buyAirtime({
@@ -55,7 +79,8 @@ export default function BuyAirtime() {
       });
 
       if (response.status === 'success') {
-        setMessage({ type: 'success', text: response.message });
+        setProcessStatus('success');
+        setProcessMessage(response.message || 'Airtime purchase successful!');
         
         // Save beneficiary if checked
         if (saveBeneficiary && beneficiaryName && user) {
@@ -75,10 +100,12 @@ export default function BuyAirtime() {
         setBeneficiaryName('');
         setSaveBeneficiary(false);
       } else {
-        setMessage({ type: 'error', text: response.message || 'Transaction failed' });
+        setProcessStatus('error');
+        setProcessMessage(response.message || 'Transaction failed');
       }
     } catch (error: any) {
-      setMessage({ type: 'error', text: error.response?.data?.message || 'An error occurred' });
+      setProcessStatus('error');
+      setProcessMessage(error.response?.data?.message || 'An error occurred during transaction');
     } finally {
       setLoading(false);
     }
@@ -330,6 +357,35 @@ export default function BuyAirtime() {
           </div>
         </div>
       </div>
+
+      {/* PIN Verification Modal */}
+      <PinModal 
+        isOpen={showPinModal}
+        onClose={() => setShowPinModal(false)}
+        onSuccess={executePurchase}
+        correctPin={profile?.transactionPin}
+        mode="verify"
+        title="Verify Transaction"
+        description={`Enter your 5-digit PIN to authorize ₦${amount} airtime purchase for ${phone}`}
+      />
+
+      {/* Setup PIN Modal (if not set) */}
+      <PinModal 
+        isOpen={showSetupPinModal}
+        onClose={() => setShowSetupPinModal(false)}
+        onSuccess={() => navigate('/profile')}
+        mode="verify" // We use verify mode but it's actually a redirect to setup
+        title="PIN Required"
+        description="You need to set a transaction PIN before you can make purchases. Would you like to set it now?"
+      />
+
+      {/* Processing Modal */}
+      <ProcessingModal 
+        isOpen={showProcessing}
+        onClose={() => setShowProcessing(false)}
+        status={processStatus}
+        message={processMessage}
+      />
     </div>
   );
 }

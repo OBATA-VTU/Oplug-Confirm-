@@ -82,7 +82,7 @@ export default function Layout() {
         <div className="flex flex-col h-full">
           <div className="p-8 flex items-center justify-between">
             <Link to="/dashboard">
-              <Logo className="scale-110 origin-left brightness-0 invert" />
+              <Logo variant="white" className="scale-110 origin-left" />
             </Link>
             <button className="lg:hidden text-white/60 hover:text-white" onClick={() => setIsSidebarOpen(false)}>
               <X className="w-6 h-6" />

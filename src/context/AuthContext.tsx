@@ -41,6 +41,7 @@ interface AuthContextType {
   profile: UserProfile | null;
   loading: boolean;
   logout: () => Promise<void>;
+  setTransactionPin: (pin: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -100,8 +101,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => signOut(auth);
 
+  const setTransactionPin = async (pin: string) => {
+    if (!user) return;
+    const profileRef = doc(db, 'users', user.uid);
+    await setDoc(profileRef, {
+      transactionPin: pin,
+      isPinSet: true
+    }, { merge: true });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, profile, loading, logout }}>
+    <AuthContext.Provider value={{ user, profile, loading, logout, setTransactionPin }}>
       {children}
     </AuthContext.Provider>
   );

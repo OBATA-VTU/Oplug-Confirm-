@@ -10,10 +10,12 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
+import PinModal from '../components/PinModal';
 
 export default function Profile() {
-  const { profile, logout } = useAuth();
+  const { profile, logout, setTransactionPin } = useAuth();
   const navigate = useNavigate();
+  const [showPinSetup, setShowPinSetup] = React.useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -37,6 +39,13 @@ export default function Profile() {
           icon: Lock, 
           path: '/profile/password',
           color: 'bg-emerald-50 text-emerald-700'
+        },
+        { 
+          name: 'Transaction PIN', 
+          description: profile?.isPinSet ? 'Change your 5-digit security PIN' : 'Set a 5-digit security PIN',
+          icon: ShieldCheck, 
+          onClick: () => setShowPinSetup(true),
+          color: 'bg-indigo-50 text-indigo-700'
         },
         { 
           name: 'API & Webhooks', 
@@ -117,24 +126,36 @@ export default function Profile() {
           <div key={idx} className="space-y-4">
             <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] px-4">{group.title}</h3>
             <div className="bg-white rounded-[2.5rem] p-4 shadow-sm border border-gray-100 space-y-2">
-              {group.items.map((item, itemIdx) => (
-                <Link 
-                  key={itemIdx}
-                  to={item.path}
-                  className="flex items-center justify-between p-4 rounded-3xl hover:bg-gray-50 transition-all group"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110", item.color)}>
-                      <item.icon className="w-6 h-6" />
+              {group.items.map((item, itemIdx) => {
+                const content = (
+                  <div className="flex items-center justify-between p-4 rounded-3xl hover:bg-gray-50 transition-all group cursor-pointer w-full text-left">
+                    <div className="flex items-center gap-4">
+                      <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110", item.color)}>
+                        <item.icon className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-black text-gray-900">{item.name}</p>
+                        <p className="text-[10px] font-bold text-gray-400">{item.description}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-black text-gray-900">{item.name}</p>
-                      <p className="text-[10px] font-bold text-gray-400">{item.description}</p>
-                    </div>
+                    <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-blue-700 group-hover:translate-x-1 transition-all" />
                   </div>
-                  <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-blue-700 group-hover:translate-x-1 transition-all" />
-                </Link>
-              ))}
+                );
+
+                if (item.onClick) {
+                  return (
+                    <button key={itemIdx} onClick={item.onClick} className="w-full">
+                      {content}
+                    </button>
+                  );
+                }
+
+                return (
+                  <Link key={itemIdx} to={item.path || '#'}>
+                    {content}
+                  </Link>
+                );
+              })}
             </div>
           </div>
         ))}
@@ -154,6 +175,18 @@ export default function Profile() {
           Logout Now
         </button>
       </div>
+
+      <PinModal 
+        isOpen={showPinSetup}
+        onClose={() => setShowPinSetup(false)}
+        onSuccess={async (pin) => {
+          if (pin) {
+            await setTransactionPin(pin);
+            alert('Transaction PIN updated successfully!');
+          }
+        }}
+        mode="setup"
+      />
     </div>
   );
 }

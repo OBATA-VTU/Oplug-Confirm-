@@ -1,0 +1,91 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - id: string (required)
+    //   - email: string (required, email format)
+    //   - walletBalance: number (required)
+    //   - role: string (required, 'user' | 'admin')
+    //   - transactionPin: string (optional)
+    //   - isPinSet: boolean (optional)
+    //   ... other profile fields
+    //
+    // Collection: transactions
+    // Document ID: {transactionId}
+    // Fields:
+    //   - userId: string (required)
+    //   - amount: number (required)
+    //   - type: string (required)
+    //   - status: string (required)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: scheduled_purchases
+    // Document ID: {purchaseId}
+    // Fields:
+    //   - userId: string (required)
+    //   - amount: number (required)
+    //   - type: string (required)
+    //   - frequency: string (required)
+    //   - nextRun: timestamp (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+        (request.auth.token.email == "samyjkr36@gmail.com" && request.auth.token.email_verified == true)
+      );
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['id', 'email', 'walletBalance', 'role']) &&
+             data.id is string &&
+             data.email is string &&
+             data.walletBalance is number &&
+             data.role in ['user', 'admin'];
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && request.auth.uid == userId && isValidUser(request.resource.data);
+      allow update: if (isOwner(userId) && 
+                       request.resource.data.role == resource.data.role && 
+                       request.resource.data.walletBalance == resource.data.walletBalance) || 
+                       isAdmin();
+    }
+
+    match /transactions/{transactionId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    match /scheduled_purchases/{purchaseId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+  }
+}

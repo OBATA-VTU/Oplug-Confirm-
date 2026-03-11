@@ -4,6 +4,7 @@ import { createUserWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider, db } from '../lib/firebase';
 import { doc, setDoc, getDocs, collection, query, where } from 'firebase/firestore';
 import { User, Mail, Phone, Lock, Eye, EyeOff, UserPlus, AtSign, Chrome, Smartphone, Users } from 'lucide-react';
+import Logo from '../components/Logo';
 
 export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
@@ -84,12 +85,7 @@ export default function Signup() {
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4 py-12">
       <div className="w-full max-w-md bg-white rounded-[40px] p-8 shadow-xl shadow-gray-200/50 border border-gray-100">
         <div className="flex flex-col items-center mb-8">
-          <div className="flex items-center gap-2 mb-6">
-            <div className="w-10 h-10 bg-blue-700 rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold text-2xl">O</span>
-            </div>
-            <span className="text-3xl font-bold text-blue-700">OPLUG</span>
-          </div>
+          <Logo className="mb-6 scale-125" />
           <h1 className="text-2xl font-bold text-gray-800">Signup</h1>
         </div>
 
