@@ -43,7 +43,12 @@ export default function SmmServices() {
   useEffect(() => {
     let result = services;
     if (selectedCategory !== 'All') {
-      result = result.filter(s => s.category === selectedCategory);
+      if (selectedCategory === 'Others') {
+        const knownApps = ['whatsapp', 'instagram', 'twitter', 'gmail', 'spotify', 'facebook', 'tiktok', 'youtube', 'telegram'];
+        result = result.filter(s => !knownApps.some(app => s.category.toLowerCase().includes(app) || s.name.toLowerCase().includes(app)));
+      } else {
+        result = result.filter(s => s.category.toLowerCase().includes(selectedCategory.toLowerCase()) || s.name.toLowerCase().includes(selectedCategory.toLowerCase()));
+      }
     }
     if (searchTerm) {
       result = result.filter(s => 
@@ -85,7 +90,7 @@ export default function SmmServices() {
     }
   };
 
-  const categories = ['All', ...Array.from(new Set(services.map(s => s.category)))];
+  const categories = ['All', 'WhatsApp', 'Instagram', 'Twitter', 'Gmail', 'Spotify', 'Facebook', 'TikTok', 'YouTube', 'Telegram', 'Others'];
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-20">

@@ -16,6 +16,7 @@ import {
   Menu, 
   X, 
   Bell,
+  Clock,
   ChevronDown,
   GraduationCap,
   Repeat,
@@ -40,6 +41,7 @@ const navItems = [
   { name: 'Electricity', path: '/electricity', icon: Zap },
   { name: 'Education Pin', path: '/education', icon: GraduationCap },
   { name: 'SMM Booster', path: '/smm', icon: ShoppingCart },
+  { name: 'Scheduled Purchases', path: '/scheduled-purchases', icon: Clock },
   { name: 'P2P Transfer', path: '/transfer', icon: Repeat },
   { name: 'History', path: '/history', icon: History },
 ];

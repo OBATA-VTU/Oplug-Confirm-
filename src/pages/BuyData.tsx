@@ -164,31 +164,16 @@ export default function BuyData() {
             <div className="space-y-8">
               <div className="space-y-4">
                 <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Select Network</label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  {networks.map((n) => (
-                    <button
-                      key={n}
-                      onClick={() => setNetwork(n)}
-                      className={cn(
-                        "flex flex-col items-center gap-3 p-4 rounded-3xl border-2 transition-all group",
-                        network === n 
-                          ? "border-blue-700 bg-blue-50/50" 
-                          : "border-gray-50 bg-gray-50/50 hover:border-gray-200"
-                      )}
-                    >
-                      <div className={cn(
-                        "w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm transition-transform group-hover:scale-110",
-                        network === n ? "bg-blue-700 text-white" : "bg-white text-gray-400"
-                      )}>
-                        <Wifi className="w-6 h-6" />
-                      </div>
-                      <span className={cn(
-                        "text-[10px] font-black uppercase tracking-widest",
-                        network === n ? "text-blue-700" : "text-gray-400"
-                      )}>{n}</span>
-                    </button>
+                <select 
+                  value={network}
+                  onChange={(e) => setNetwork(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-5 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none cursor-pointer"
+                >
+                  <option value="">Select Network Provider</option>
+                  {networks.map((n: any) => (
+                    <option key={n} value={n}>{(n as string).toUpperCase()}</option>
                   ))}
-                </div>
+                </select>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

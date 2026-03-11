@@ -18,6 +18,7 @@ import Support from './pages/Support';
 import ReferAndEarn from './pages/ReferAndEarn';
 import GiftCard from './pages/GiftCard';
 import History from './pages/History';
+import ScheduledPurchases from './pages/ScheduledPurchases';
 import DeveloperAPI from './pages/DeveloperAPI';
 import Profile from './pages/Profile';
 import PersonalInfo from './pages/profile/PersonalInfo';
@@ -144,6 +145,7 @@ function AppRoutes() {
         <Route path="/giftcard" element={<GiftCard />} />
         <Route path="/crypto" element={<Crypto />} />
         <Route path="/history" element={<History />} />
+        <Route path="/scheduled-purchases" element={<ScheduledPurchases />} />
         <Route path="/developer" element={<DeveloperAPI />} />
         <Route path="/services" element={<AllServices />} />
         <Route path="/profile" element={<Profile />} />

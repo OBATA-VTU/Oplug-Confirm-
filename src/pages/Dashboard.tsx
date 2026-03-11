@@ -116,7 +116,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between mb-12">
             <div className="flex items-center gap-3 bg-black/30 px-5 py-2.5 rounded-2xl backdrop-blur-xl border border-white/10">
               <ShieldCheck className="w-5 h-5 text-amber-300" />
-              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-100">Midas Treasury</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-100">Oplug Treasury</span>
             </div>
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-black/30 rounded-2xl flex items-center justify-center backdrop-blur-xl border border-white/10 group-hover:rotate-12 transition-transform">

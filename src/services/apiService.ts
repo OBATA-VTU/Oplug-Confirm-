@@ -9,33 +9,41 @@ export const vtuService = {
   },
 
   async getServices() {
-    // Try to get from Firestore first
+    // Try to get from Firestore collection first
+    try {
+      const servicesCol = collection(db, 'vtu_services');
+      const snap = await getDocs(servicesCol);
+      if (!snap.empty) {
+        const services = snap.docs.map(doc => doc.data());
+        // Group back into the expected format
+        return {
+          status: 'success',
+          data: {
+            dataPlans: services.filter((s: any) => s.serviceID.toString().startsWith('1')), // Simple heuristic
+            airtimePlans: services.filter((s: any) => s.serviceID.toString().startsWith('2')),
+            cablePlans: services.filter((s: any) => s.serviceID.toString().startsWith('3')),
+            electricPlans: services.filter((s: any) => s.serviceID.toString().startsWith('4')),
+            educationPlans: services.filter((s: any) => s.serviceID.toString().startsWith('5'))
+          }
+        };
+      }
+    } catch (err) {
+      console.warn('Firestore collection read failed, falling back to cache', err);
+    }
+
+    // Fallback to cache document
     try {
       const snap = await getDoc(doc(db, 'cache', 'vtu_services'));
       if (snap.exists()) {
         const data = snap.data();
-        const now = Date.now();
-        // Cache for 1 hour
-        if (now - data.timestamp < 3600000) {
-          return data.services;
-        }
+        return data.services;
       }
     } catch (err) {
       console.warn('Firestore cache read failed', err);
     }
 
+    // Final fallback to API
     const response = await axios.get('/api/vtu/services');
-    
-    // Cache to Firestore
-    try {
-      await setDoc(doc(db, 'cache', 'vtu_services'), {
-        services: response.data,
-        timestamp: Date.now()
-      });
-    } catch (err) {
-      console.warn('Firestore cache write failed', err);
-    }
-
     return response.data;
   },
 
@@ -106,33 +114,29 @@ export const vtuService = {
 
 export const smmService = {
   async getServices() {
-    // Try to get from Firestore first
+    // Try to get from Firestore collection first
+    try {
+      const servicesCol = collection(db, 'smm_services');
+      const snap = await getDocs(servicesCol);
+      if (!snap.empty) {
+        return snap.docs.map(doc => doc.data());
+      }
+    } catch (err) {
+      console.warn('Firestore collection read failed, falling back to cache', err);
+    }
+
+    // Fallback to cache document
     try {
       const snap = await getDoc(doc(db, 'cache', 'smm_services'));
       if (snap.exists()) {
         const data = snap.data();
-        const now = Date.now();
-        // Cache for 1 hour
-        if (now - data.timestamp < 3600000) {
-          return data.services;
-        }
+        return data.services;
       }
     } catch (err) {
       console.warn('Firestore cache read failed', err);
     }
 
     const response = await axios.post('/api/smm/action', { action: 'services' });
-    
-    // Cache to Firestore
-    try {
-      await setDoc(doc(db, 'cache', 'smm_services'), {
-        services: response.data,
-        timestamp: Date.now()
-      });
-    } catch (err) {
-      console.warn('Firestore cache write failed', err);
-    }
-
     return response.data;
   },
 

@@ -162,9 +162,9 @@ export default function Home() {
               >
                 <div className="relative min-h-[400px] flex items-center justify-center">
                   <img 
-                    src={settings?.heroImage || "https://illustrations.popsy.co/blue/woman-with-smartphone.svg"} 
-                    alt="Woman using phone" 
-                    className="w-full max-w-lg mx-auto drop-shadow-2xl"
+                    src={settings?.heroImage || "https://images.unsplash.com/photo-1556157382-97dee2dcb756?auto=format&fit=crop&q=80&w=1000"} 
+                    alt="Man using phone" 
+                    className="w-full max-w-lg mx-auto drop-shadow-2xl rounded-[3rem]"
                     referrerPolicy="no-referrer"
                   />
                   <motion.div 
