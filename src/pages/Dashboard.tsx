@@ -84,8 +84,9 @@ export default function Dashboard() {
             <p className="text-xs text-amber-800 leading-relaxed mb-3">
               Your profile is incomplete. Please update your details and ensure your virtual account is generated to enjoy full access.
               {!profile?.virtualAccount && (
-                <span className="block mt-1 font-bold text-red-600">
-                  ⚠️ Virtual account not found. Please contact support or try creating a new account if this persists.
+                <span className="flex items-center gap-1 mt-1 font-bold text-red-600">
+                  <ShieldAlert className="w-3 h-3" />
+                  Virtual account not found. Please contact support or try creating a new account if this persists.
                 </span>
               )}
             </p>
@@ -100,50 +101,59 @@ export default function Dashboard() {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative rounded-[2.5rem] p-10 text-white overflow-hidden shadow-2xl shadow-amber-200/50 bg-[#1A1A1A] border border-amber-500/20"
+        className="relative rounded-[3rem] p-10 text-white overflow-hidden shadow-2xl shadow-amber-200/50 bg-[#1A1A1A] border border-amber-500/20 group"
       >
         {/* Gold Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#BF953F] via-[#FCF6BA] to-[#B38728] opacity-90 mix-blend-overlay" />
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/greek-vase.png')] opacity-10" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#BF953F] via-[#FCF6BA] to-[#B38728] opacity-95 mix-blend-overlay" />
+        
+        {/* Greek Pattern Overlay */}
+        <div className="absolute inset-0 opacity-[0.07] pointer-events-none" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 30c0-16.569 13.431-30 30-30v60c-16.569 0-30-13.431-30-30zM0 0c16.569 0 30 13.431 30 30 0 16.569-13.431 30-30 30V0z' fill='%23000000' fill-opacity='1' fill-rule='evenodd'/%3E%3C/svg%3E")`,
+          backgroundSize: '40px 40px'
+        }} />
         
         <div className="relative z-10">
-          <div className="flex items-center justify-between mb-10">
-            <div className="flex items-center gap-2 bg-black/20 px-4 py-2 rounded-full backdrop-blur-md border border-white/10">
-              <ShieldCheck className="w-4 h-4 text-amber-200" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-100">Midas Wallet</span>
+          <div className="flex items-center justify-between mb-12">
+            <div className="flex items-center gap-3 bg-black/30 px-5 py-2.5 rounded-2xl backdrop-blur-xl border border-white/10">
+              <ShieldCheck className="w-5 h-5 text-amber-300" />
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-100">Midas Treasury</span>
             </div>
             <div className="flex items-center gap-3">
-              <button className="p-2.5 bg-black/20 rounded-full hover:bg-black/30 transition-colors border border-white/10">
-                <Bell className="w-5 h-5 text-amber-100" />
-              </button>
+              <div className="w-12 h-12 bg-black/30 rounded-2xl flex items-center justify-center backdrop-blur-xl border border-white/10 group-hover:rotate-12 transition-transform">
+                <Wallet className="w-6 h-6 text-amber-200" />
+              </div>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <p className="text-xs font-black text-amber-100/60 uppercase tracking-[0.3em]">Total Wealth</p>
-            <div className="flex items-baseline gap-3">
-              <span className="text-3xl font-black text-amber-200">₦</span>
-              <h2 className="text-6xl font-black tracking-tighter text-white drop-shadow-lg">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <p className="text-[10px] font-black text-amber-100/70 uppercase tracking-[0.4em]">Available Wealth</p>
+              <div className="h-px flex-1 bg-amber-100/20" />
+            </div>
+            <div className="flex items-baseline gap-4">
+              <span className="text-4xl font-black text-amber-300 drop-shadow-md">₦</span>
+              <h2 className="text-7xl font-black tracking-tighter text-white drop-shadow-2xl">
                 {profile?.walletBalance?.toLocaleString() || '0.00'}
               </h2>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-6 mt-12">
-            <Link to="/fund" className="flex items-center justify-center gap-3 bg-white text-amber-900 py-5 rounded-2xl font-black text-sm shadow-xl hover:scale-[1.02] transition-transform active:scale-[0.98]">
-              <Plus className="w-5 h-5" />
-              Add Gold
+          <div className="grid grid-cols-2 gap-6 mt-14">
+            <Link to="/fund" className="flex items-center justify-center gap-3 bg-white text-amber-950 py-5 rounded-[2rem] font-black text-sm shadow-2xl hover:scale-[1.02] transition-transform active:scale-[0.98] group/btn">
+              <Plus className="w-5 h-5 group-hover/btn:rotate-90 transition-transform" />
+              Fund Wallet
             </Link>
-            <Link to="/transfer" className="flex items-center justify-center gap-3 bg-black/30 text-white py-5 rounded-2xl font-black text-sm backdrop-blur-md border border-white/10 hover:bg-black/40 transition-all active:scale-[0.98]">
+            <Link to="/transfer" className="flex items-center justify-center gap-3 bg-black/40 text-white py-5 rounded-[2rem] font-black text-sm backdrop-blur-xl border border-white/10 hover:bg-black/50 transition-all active:scale-[0.98]">
               <ArrowRightLeft className="w-5 h-5" />
               Transfer
             </Link>
           </div>
         </div>
 
-        {/* Decorative Gold Rings */}
-        <div className="absolute -top-20 -right-20 w-80 h-80 border-[20px] border-amber-400/10 rounded-full" />
-        <div className="absolute -bottom-20 -left-20 w-64 h-64 border-[15px] border-amber-300/10 rounded-full" />
+        {/* Decorative Elements */}
+        <div className="absolute -top-24 -right-24 w-96 h-96 border-[30px] border-amber-400/5 rounded-full" />
+        <div className="absolute -bottom-24 -left-24 w-80 h-80 border-[20px] border-amber-300/5 rounded-full" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
       </motion.div>
 
       {/* Virtual Account Quick Info */}
@@ -177,11 +187,9 @@ export default function Dashboard() {
         <div className="bg-orange-50 border border-orange-100 rounded-2xl p-3 overflow-hidden">
           <div className="flex items-center gap-3">
             <div className="bg-orange-500 p-1.5 rounded-lg">
-              <Megaphone className="w-4 h-4 text-white" />
-            </div>
-            <div className="flex-1 overflow-hidden">
+              <ShieldAlert className="w-4 h-4 text-amber-500" />
               <p className="text-sm font-bold text-orange-800 whitespace-nowrap animate-marquee">
-                {settings.announcement} • {settings.announcement}
+                {settings.announcement} <span className="mx-4 text-orange-300">|</span> {settings.announcement}
               </p>
             </div>
           </div>

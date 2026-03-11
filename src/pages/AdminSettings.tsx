@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Save, Globe, Shield, Bell, Image as ImageIcon, Plus, X } from 'lucide-react';
+import { Save, Globe, Shield, Bell, Image as ImageIcon, Plus, X, RefreshCw, Database } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { vtuService, smmService } from '../services/apiService';
 
 export default function AdminSettings() {
   const [settings, setSettings] = useState<any>({
@@ -26,6 +27,7 @@ export default function AdminSettings() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState({ vtu: false, smm: false });
   const [message, setMessage] = useState('');
   const [newLogo, setNewLogo] = useState('');
 
@@ -58,6 +60,30 @@ export default function AdminSettings() {
     }
   };
 
+  const handleSyncVTU = async () => {
+    setSyncing(prev => ({ ...prev, vtu: true }));
+    try {
+      await vtuService.syncToFirestore();
+      setMessage('VTU Services synced to database successfully!');
+    } catch (err) {
+      setMessage('Failed to sync VTU services.');
+    } finally {
+      setSyncing(prev => ({ ...prev, vtu: false }));
+    }
+  };
+
+  const handleSyncSMM = async () => {
+    setSyncing(prev => ({ ...prev, smm: true }));
+    try {
+      await smmService.syncToFirestore();
+      setMessage('SMM Services synced to database successfully!');
+    } catch (err) {
+      setMessage('Failed to sync SMM services.');
+    } finally {
+      setSyncing(prev => ({ ...prev, smm: false }));
+    }
+  };
+
   const addLogo = () => {
     if (newLogo) {
       setSettings({ ...settings, supportedLogos: [...settings.supportedLogos, newLogo] });
@@ -76,7 +102,7 @@ export default function AdminSettings() {
   return (
     <div className="space-y-8 max-w-5xl">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">System Settings</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-gray-900">System Settings</h1>
         <button 
           onClick={handleSave}
           disabled={saving}
@@ -97,6 +123,41 @@ export default function AdminSettings() {
       )}
 
       <div className="grid md:grid-cols-2 gap-8">
+        {/* Sync Services */}
+        <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm space-y-6 md:col-span-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-bold flex items-center gap-2">
+              <Database className="w-5 h-5 text-blue-700" />
+              Database Sync
+            </h3>
+            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-50 px-3 py-1 rounded-full">Admin Only</span>
+          </div>
+          <p className="text-sm text-gray-500 font-medium">Sync all services from VTU and SMM panels to Firestore for faster loading on the user-facing website.</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <button 
+              onClick={handleSyncVTU}
+              disabled={syncing.vtu}
+              className="flex items-center justify-between p-6 bg-blue-50 rounded-3xl border border-blue-100 hover:bg-blue-100 transition-all group"
+            >
+              <div className="text-left">
+                <p className="text-sm font-black text-blue-900">Sync VTU Services</p>
+                <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mt-1">Airtime, Data, Cable, etc.</p>
+              </div>
+              <RefreshCw className={cn("w-6 h-6 text-blue-700 transition-transform", syncing.vtu && "animate-spin")} />
+            </button>
+            <button 
+              onClick={handleSyncSMM}
+              disabled={syncing.smm}
+              className="flex items-center justify-between p-6 bg-purple-50 rounded-3xl border border-purple-100 hover:bg-purple-100 transition-all group"
+            >
+              <div className="text-left">
+                <p className="text-sm font-black text-purple-900">Sync SMM Services</p>
+                <p className="text-[10px] font-bold text-purple-600 uppercase tracking-widest mt-1">Social Media Boosters</p>
+              </div>
+              <RefreshCw className={cn("w-6 h-6 text-purple-700 transition-transform", syncing.smm && "animate-spin")} />
+            </button>
+          </div>
+        </div>
         {/* General Settings */}
         <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm space-y-6">
           <h3 className="text-xl font-bold flex items-center gap-2">

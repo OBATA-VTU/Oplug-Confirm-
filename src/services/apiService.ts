@@ -1,4 +1,6 @@
 import axios from 'axios';
+import { db } from '../lib/firebase';
+import { doc, getDoc, setDoc, collection, getDocs, writeBatch } from 'firebase/firestore';
 
 export const vtuService = {
   async getBalance() {
@@ -7,7 +9,62 @@ export const vtuService = {
   },
 
   async getServices() {
+    // Try to get from Firestore first
+    try {
+      const snap = await getDoc(doc(db, 'cache', 'vtu_services'));
+      if (snap.exists()) {
+        const data = snap.data();
+        const now = Date.now();
+        // Cache for 1 hour
+        if (now - data.timestamp < 3600000) {
+          return data.services;
+        }
+      }
+    } catch (err) {
+      console.warn('Firestore cache read failed', err);
+    }
+
     const response = await axios.get('/api/vtu/services');
+    
+    // Cache to Firestore
+    try {
+      await setDoc(doc(db, 'cache', 'vtu_services'), {
+        services: response.data,
+        timestamp: Date.now()
+      });
+    } catch (err) {
+      console.warn('Firestore cache write failed', err);
+    }
+
+    return response.data;
+  },
+
+  async syncToFirestore() {
+    const response = await axios.get('/api/vtu/services');
+    const services = response.data;
+    
+    // Sync to collection for better querying
+    const batch = writeBatch(db);
+    const servicesCol = collection(db, 'vtu_services');
+    
+    // Clear existing or just update
+    // For simplicity, we'll just set them
+    if (Array.isArray(services)) {
+      services.forEach((service: any) => {
+        const docRef = doc(servicesCol, service.serviceID.toString());
+        batch.set(docRef, {
+          ...service,
+          updatedAt: Date.now()
+        });
+      });
+      await batch.commit();
+    }
+
+    // Also update the cache document for legacy support
+    await setDoc(doc(db, 'cache', 'vtu_services'), {
+      services: response.data,
+      timestamp: Date.now()
+    });
     return response.data;
   },
 
@@ -49,7 +106,60 @@ export const vtuService = {
 
 export const smmService = {
   async getServices() {
+    // Try to get from Firestore first
+    try {
+      const snap = await getDoc(doc(db, 'cache', 'smm_services'));
+      if (snap.exists()) {
+        const data = snap.data();
+        const now = Date.now();
+        // Cache for 1 hour
+        if (now - data.timestamp < 3600000) {
+          return data.services;
+        }
+      }
+    } catch (err) {
+      console.warn('Firestore cache read failed', err);
+    }
+
     const response = await axios.post('/api/smm/action', { action: 'services' });
+    
+    // Cache to Firestore
+    try {
+      await setDoc(doc(db, 'cache', 'smm_services'), {
+        services: response.data,
+        timestamp: Date.now()
+      });
+    } catch (err) {
+      console.warn('Firestore cache write failed', err);
+    }
+
+    return response.data;
+  },
+
+  async syncToFirestore() {
+    const response = await axios.post('/api/smm/action', { action: 'services' });
+    const services = response.data;
+
+    // Sync to collection
+    const batch = writeBatch(db);
+    const servicesCol = collection(db, 'smm_services');
+
+    if (Array.isArray(services)) {
+      services.forEach((service: any) => {
+        const docRef = doc(servicesCol, service.service.toString());
+        batch.set(docRef, {
+          ...service,
+          name: service.name.replace(/Ogaviral/gi, 'Oplug'),
+          updatedAt: Date.now()
+        });
+      });
+      await batch.commit();
+    }
+
+    await setDoc(doc(db, 'cache', 'smm_services'), {
+      services: response.data,
+      timestamp: Date.now()
+    });
     return response.data;
   },
 

@@ -173,8 +173,9 @@ export default function Home() {
                     transition={{ delay: 1.2, type: 'spring' }}
                     className="absolute -top-4 -right-4 bg-white p-4 rounded-3xl shadow-2xl border-2 border-blue-700 max-w-[180px]"
                   >
-                    <p className="text-xs font-black text-blue-700 leading-tight">
-                      "1GB Data Purchase on Oplug is Successful! 🎉"
+                    <p className="text-xs font-black text-blue-700 leading-tight flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                      "1GB Data Purchase on Oplug is Successful!"
                     </p>
                     <div className="absolute -bottom-2 left-4 w-4 h-4 bg-white border-b-2 border-r-2 border-blue-700 rotate-45" />
                   </motion.div>

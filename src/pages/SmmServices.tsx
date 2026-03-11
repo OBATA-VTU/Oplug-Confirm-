@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { smmService } from '../services/apiService';
-import { Search, ShoppingCart, Info, ExternalLink, Globe, Plus } from 'lucide-react';
+import { Search, ShoppingCart, Info, ExternalLink, Globe, Plus, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 
@@ -203,7 +203,7 @@ export default function SmmServices() {
                   onClick={() => setSelectedService(null)}
                   className="p-3 bg-gray-50 text-gray-400 hover:text-gray-900 rounded-2xl transition-colors"
                 >
-                  ✕
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 

@@ -22,7 +22,8 @@ import {
   Wallet,
   ShoppingCart,
   ShieldAlert,
-  Shield
+  Shield,
+  Grid
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
@@ -31,6 +32,7 @@ import Logo from './Logo';
 
 const navItems = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+  { name: 'All Services', path: '/services', icon: Grid },
   { name: 'Fund Wallet', path: '/fund', icon: Wallet },
   { name: 'Buy Airtime', path: '/airtime', icon: Phone },
   { name: 'Buy Data', path: '/data', icon: Wifi },

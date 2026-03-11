@@ -20,6 +20,11 @@ import GiftCard from './pages/GiftCard';
 import History from './pages/History';
 import DeveloperAPI from './pages/DeveloperAPI';
 import Profile from './pages/Profile';
+import PersonalInfo from './pages/profile/PersonalInfo';
+import PasswordSettings from './pages/profile/PasswordSettings';
+import ApiWebhookSettings from './pages/profile/ApiWebhookSettings';
+import NotificationSettings from './pages/profile/NotificationSettings';
+import AppDownload from './pages/profile/AppDownload';
 import Crypto from './pages/Crypto';
 import P2PTransfer from './pages/P2PTransfer';
 import About from './pages/About';
@@ -41,6 +46,7 @@ import SmmApi from './pages/docs/SmmApi';
 import CryptoApi from './pages/docs/CryptoApi';
 import ServicesApi from './pages/docs/ServicesApi';
 import ApiSandbox from './pages/docs/ApiSandbox';
+import AllServices from './pages/AllServices';
 import ProfileSetupModal from './components/ProfileSetupModal';
 import { useInactivityLogout } from './hooks/useInactivityLogout';
 
@@ -92,7 +98,7 @@ function AppRoutes() {
     if (window.location.pathname === '/' && lastPath && lastPath !== '/') {
       // Only redirect if we are at the root and have a saved path
       // This helps with reloads on subpages if the server redirects to root
-      // navigate(lastPath);
+      navigate(lastPath);
     }
   }, []);
 
@@ -139,7 +145,13 @@ function AppRoutes() {
         <Route path="/crypto" element={<Crypto />} />
         <Route path="/history" element={<History />} />
         <Route path="/developer" element={<DeveloperAPI />} />
+        <Route path="/services" element={<AllServices />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/profile/personal-info" element={<PersonalInfo />} />
+        <Route path="/profile/password" element={<PasswordSettings />} />
+        <Route path="/profile/api-webhook" element={<ApiWebhookSettings />} />
+        <Route path="/profile/notifications" element={<NotificationSettings />} />
+        <Route path="/profile/download-app" element={<AppDownload />} />
         <Route path="/dashboard/terms" element={<Terms />} />
       </Route>
 

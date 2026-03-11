@@ -5,8 +5,9 @@ import axios from 'axios';
 
 dotenv.config();
 
+export const app = express();
+
 async function startServer() {
-  const app = express();
   const PORT = 3000;
 
   app.use(express.json());
@@ -150,7 +151,7 @@ async function startServer() {
         email,
         amount: amount * 100, // Paystack expects kobo
         reference,
-        callback_url: 'https://oplug.vercel.app/dashboard'
+        callback_url: `${process.env.APP_URL || 'https://oplug.vercel.app'}/dashboard`
       }, {
         headers: { 'Authorization': `Bearer ${process.env.PAYSTACK_SECRET_KEY}` }
       });
@@ -173,7 +174,7 @@ async function startServer() {
   });
 
   // Vite middleware for development
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.NODE_ENV !== 'production' && process.env.VERCEL !== '1') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
