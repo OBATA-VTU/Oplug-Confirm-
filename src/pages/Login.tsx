@@ -4,8 +4,10 @@ import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider } from '../lib/firebase';
 import { Mail, Lock, Eye, EyeOff, Chrome, LogIn, ArrowRight } from 'lucide-react';
 import AuthLayout from '../components/AuthLayout';
-import { getFriendlyErrorMessage } from '../lib/errorHandlers';
+import { getFriendlyErrorMessage, handleFirestoreError, OperationType } from '../lib/errorHandlers';
 import { useToast } from '../context/ToastContext';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
@@ -32,7 +34,7 @@ export default function Login() {
     setLoading(true);
     setError('');
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
       
       if (rememberMe) {
         localStorage.setItem('remembered_email', email);
@@ -42,6 +44,16 @@ export default function Login() {
         localStorage.removeItem('remembered_password');
       }
       
+      // Check if user profile exists
+      try {
+        const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+        if (!userDoc.exists()) {
+          showToast('warning', 'Profile Missing', 'Your account exists but your profile data is missing. Please contact support.');
+        }
+      } catch (err) {
+        handleFirestoreError(err, OperationType.GET, `users/${userCredential.user.uid}`, auth);
+      }
+
       showToast('success', 'Welcome Back!', 'You have successfully logged in.');
       navigate('/dashboard');
     } catch (err: any) {
@@ -183,7 +195,5 @@ export default function Login() {
         </p>
       </div>
     </AuthLayout>
-  );
-}
   );
 }

@@ -5,7 +5,7 @@ import { auth, googleProvider, db } from '../lib/firebase';
 import { doc, setDoc, getDocs, collection, query, where } from 'firebase/firestore';
 import { User, Mail, Smartphone, Lock, Eye, EyeOff, UserPlus, AtSign, Chrome, Users, ArrowRight } from 'lucide-react';
 import AuthLayout from '../components/AuthLayout';
-import { getFriendlyErrorMessage } from '../lib/errorHandlers';
+import { getFriendlyErrorMessage, handleFirestoreError, OperationType } from '../lib/errorHandlers';
 import { useToast } from '../context/ToastContext';
 
 export default function Signup() {
@@ -32,9 +32,15 @@ export default function Signup() {
     setError('');
     try {
       // Check if username exists
-      const q = query(collection(db, 'users'), where('username', '==', username.toLowerCase()));
-      const querySnapshot = await getDocs(q);
-      if (!querySnapshot.empty) {
+      let querySnapshot;
+      try {
+        const q = query(collection(db, 'users'), where('username', '==', username.toLowerCase()));
+        querySnapshot = await getDocs(q);
+      } catch (err) {
+        handleFirestoreError(err, OperationType.LIST, 'users', auth);
+      }
+
+      if (querySnapshot && !querySnapshot.empty) {
         throw new Error('Username already taken');
       }
 
@@ -46,26 +52,30 @@ export default function Signup() {
       const firstName = names[0];
       const lastName = names.slice(1).join(' ');
 
-      await setDoc(doc(db, 'users', firebaseUser.uid), {
-        id: firebaseUser.uid,
-        email: email.toLowerCase(),
-        fullName: fullname,
-        firstName: firstName,
-        lastName: lastName,
-        username: username.toLowerCase(),
-        phone: phone,
-        walletBalance: 0,
-        role: 'user',
-        status: 'active',
-        referralCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
-        referralCount: 0,
-        referralEarnings: 0,
-        referredBy: referralUsername || null,
-        isPinSet: false,
-        transactionPin: '',
-        isProfileComplete: false,
-        createdAt: new Date(),
-      });
+      try {
+        await setDoc(doc(db, 'users', firebaseUser.uid), {
+          id: firebaseUser.uid,
+          email: email.toLowerCase(),
+          fullName: fullname,
+          firstName: firstName,
+          lastName: lastName,
+          username: username.toLowerCase(),
+          phone: phone,
+          walletBalance: 0,
+          role: 'user',
+          status: 'active',
+          referralCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
+          referralCount: 0,
+          referralEarnings: 0,
+          referredBy: referralUsername || null,
+          isPinSet: false,
+          transactionPin: '',
+          isProfileComplete: false,
+          createdAt: new Date(),
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.CREATE, `users/${firebaseUser.uid}`, auth);
+      }
 
       showToast('success', 'Account Created!', 'Welcome to Oplug! Your account has been successfully created.');
       navigate('/dashboard');
@@ -274,7 +284,5 @@ export default function Signup() {
         </p>
       </div>
     </AuthLayout>
-  );
-}
   );
 }
