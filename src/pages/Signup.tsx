@@ -2,15 +2,17 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createUserWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider, db } from '../lib/firebase';
-import { doc, setDoc, getDocs, collection, query, where } from 'firebase/firestore';
-import { User, Mail, Smartphone, Lock, Eye, EyeOff, UserPlus, AtSign, Chrome, Users, ArrowRight } from 'lucide-react';
+import { doc, setDoc, getDocs, collection, query, where, updateDoc } from 'firebase/firestore';
+import { User, Mail, Smartphone, Lock, Eye, EyeOff, UserPlus, AtSign, Chrome, Users, ArrowRight, Landmark } from 'lucide-react';
 import AuthLayout from '../components/AuthLayout';
 import { getFriendlyErrorMessage, handleFirestoreError, OperationType } from '../lib/errorHandlers';
 import { useToast } from '../context/ToastContext';
+import { fundingService } from '../services/apiService';
 
 export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
-  const [fullname, setFullname] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -48,9 +50,7 @@ export default function Signup() {
       const firebaseUser = userCredential.user;
 
       // Create profile
-      const names = fullname.split(' ');
-      const firstName = names[0];
-      const lastName = names.slice(1).join(' ');
+      const fullname = `${firstName} ${lastName}`;
 
       try {
         await setDoc(doc(db, 'users', firebaseUser.uid), {
@@ -77,7 +77,36 @@ export default function Signup() {
         handleFirestoreError(err, OperationType.CREATE, `users/${firebaseUser.uid}`, auth);
       }
 
-      showToast('success', 'Account Created!', 'Welcome to Oplug! Your account has been successfully created.');
+      // Generate Virtual Account immediately
+      try {
+        const palmpayRes = await fundingService.generateVirtualAccount({
+          email: email.toLowerCase(),
+          reference: `VAG_${firebaseUser.uid}_${Date.now()}`,
+          firstName: firstName,
+          lastName: lastName,
+          phone: phone,
+          bank: 'PALMPAY'
+        });
+
+        if (palmpayRes.status) {
+          const account = palmpayRes.data.account[0];
+          await updateDoc(doc(db, 'users', firebaseUser.uid), {
+            virtualAccount: {
+              account_name: account.account_name,
+              account_number: account.account_number,
+              bank_id: account.bank_id,
+              bank_name: account.bank_name,
+              reference: account.reference
+            },
+            isProfileComplete: true
+          });
+        }
+      } catch (vErr) {
+        console.error('Virtual account generation failed:', vErr);
+        // We don't block signup if virtual account fails, user can try later in dashboard
+      }
+
+      showToast('success', 'Account Created!', 'Welcome to Oplug! Your account and virtual funding account are ready.');
       navigate('/dashboard');
     } catch (err: any) {
       const friendlyMsg = getFriendlyErrorMessage(err);
@@ -114,16 +143,33 @@ export default function Signup() {
 
       <form onSubmit={handleSignup} className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Full Name</label>
+          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">First Name</label>
           <div className="relative group">
             <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
               <User className="h-5 w-5 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
             </div>
             <input
               type="text"
-              placeholder="John Doe"
-              value={fullname}
-              onChange={(e) => setFullname(e.target.value)}
+              placeholder="John"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              className="block w-full pl-14 pr-5 py-4 bg-gray-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl focus:outline-none transition-all text-sm font-medium"
+              required
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Last Name</label>
+          <div className="relative group">
+            <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+              <User className="h-5 w-5 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
+            </div>
+            <input
+              type="text"
+              placeholder="Doe"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
               className="block w-full pl-14 pr-5 py-4 bg-gray-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl focus:outline-none transition-all text-sm font-medium"
               required
             />
@@ -197,7 +243,7 @@ export default function Signup() {
           </div>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 md:col-span-2">
           <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Password</label>
           <div className="relative group">
             <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
@@ -247,7 +293,10 @@ export default function Signup() {
           className="md:col-span-2 w-full bg-blue-700 text-white font-black py-5 rounded-2xl hover:bg-blue-800 transition-all shadow-xl shadow-blue-200 active:scale-[0.98] flex items-center justify-center gap-3 mt-4"
         >
           {loading ? (
-            <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+            <div className="flex items-center gap-3">
+              <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+              <span>SETTING UP YOUR ACCOUNT...</span>
+            </div>
           ) : (
             <>
               <UserPlus className="w-5 h-5" />

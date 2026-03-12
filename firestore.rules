@@ -63,12 +63,15 @@ service cloud.firestore {
     }
 
     function isValidUser(data) {
-      return data.keys().hasAll(['id', 'email', 'walletBalance', 'role', 'username']) &&
+      return data.keys().hasAll(['id', 'email', 'walletBalance', 'role', 'username', 'firstName', 'lastName', 'phone']) &&
              data.id is string &&
              data.email is string &&
              data.walletBalance is number &&
              data.role in ['user', 'admin'] &&
-             data.username is string;
+             data.username is string &&
+             data.firstName is string &&
+             data.lastName is string &&
+             data.phone is string;
     }
 
     // ===============================================================
