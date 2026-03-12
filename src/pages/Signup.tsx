@@ -5,6 +5,8 @@ import { auth, googleProvider, db } from '../lib/firebase';
 import { doc, setDoc, getDocs, collection, query, where } from 'firebase/firestore';
 import { User, Mail, Phone, Lock, Eye, EyeOff, UserPlus, AtSign, Chrome, Smartphone, Users } from 'lucide-react';
 import Logo from '../components/Logo';
+import { getFriendlyErrorMessage } from '../lib/errorHandlers';
+import { useToast } from '../context/ToastContext';
 
 export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
@@ -18,6 +20,7 @@ export default function Signup() {
   const [error, setError] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,9 +67,12 @@ export default function Signup() {
         createdAt: new Date(),
       });
 
+      showToast('success', 'Account Created!', 'Welcome to Oplug! Your account has been successfully created.');
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.message || 'Failed to create account');
+      const friendlyMsg = getFriendlyErrorMessage(err);
+      setError(friendlyMsg);
+      showToast('error', 'Signup Failed', friendlyMsg);
     } finally {
       setLoading(false);
     }
@@ -75,9 +81,12 @@ export default function Signup() {
   const handleGoogleSignup = async () => {
     try {
       await signInWithPopup(auth, googleProvider);
+      showToast('success', 'Welcome!', 'You have successfully signed up with Google.');
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.message || 'Google signup failed');
+      const friendlyMsg = getFriendlyErrorMessage(err);
+      setError(friendlyMsg);
+      showToast('error', 'Google Signup Failed', friendlyMsg);
     }
   };
 

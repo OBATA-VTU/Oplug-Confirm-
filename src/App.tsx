@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
 import { useEffect } from 'react';
 import Layout from './components/Layout';
 import Home from './pages/Home';
@@ -85,23 +86,34 @@ function AppRoutes() {
   useInactivityLogout();
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
 
   // Save last path
   useEffect(() => {
-    if (location.pathname !== '/login' && location.pathname !== '/signup' && location.pathname !== '/') {
+    const publicPaths = ['/login', '/signup', '/', '/about', '/terms', '/privacy', '/contact', '/blog', '/pricing'];
+    if (!publicPaths.includes(location.pathname) && !location.pathname.startsWith('/blog/')) {
       localStorage.setItem('lastPath', location.pathname);
     }
   }, [location]);
 
-  // Restore last path on mount if at root
+  // Restore last path on mount if at root and authenticated
   useEffect(() => {
-    const lastPath = localStorage.getItem('lastPath');
-    if (window.location.pathname === '/' && lastPath && lastPath !== '/') {
-      // Only redirect if we are at the root and have a saved path
-      // This helps with reloads on subpages if the server redirects to root
-      navigate(lastPath);
+    if (!loading && user && window.location.pathname === '/') {
+      const lastPath = localStorage.getItem('lastPath');
+      if (lastPath && lastPath !== '/') {
+        navigate(lastPath);
+      } else {
+        navigate('/dashboard');
+      }
     }
-  }, []);
+  }, [loading, user]);
+
+  // Redirect from auth pages if logged in
+  useEffect(() => {
+    if (!loading && user && (location.pathname === '/login' || location.pathname === '/signup')) {
+      navigate('/dashboard');
+    }
+  }, [loading, user, location.pathname]);
 
   return (
     <Routes>
@@ -180,7 +192,9 @@ function AppContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
     </AuthProvider>
   );
 }

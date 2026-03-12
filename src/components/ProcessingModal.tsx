@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Shield, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { getFriendlyErrorMessage } from '../lib/errorHandlers';
 
 interface ProcessingModalProps {
   isOpen: boolean;
@@ -10,6 +11,8 @@ interface ProcessingModalProps {
 }
 
 export default function ProcessingModal({ isOpen, status, message, onClose }: ProcessingModalProps) {
+  const friendlyMessage = status === 'error' ? getFriendlyErrorMessage(message) : message;
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -43,7 +46,7 @@ export default function ProcessingModal({ isOpen, status, message, onClose }: Pr
                     <CheckCircle2 className="w-12 h-12 text-emerald-600" />
                   </div>
                   <h3 className="text-xl font-black text-gray-900 mb-2">Transaction Successful</h3>
-                  <p className="text-gray-500 text-sm font-medium mb-8">{message || 'Your transaction has been completed successfully.'}</p>
+                  <p className="text-gray-500 text-sm font-medium mb-8">{friendlyMessage || 'Your transaction has been completed successfully.'}</p>
                   <button 
                     onClick={onClose}
                     className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-black text-sm shadow-xl shadow-emerald-100 hover:scale-[1.02] transition-transform"
@@ -59,7 +62,7 @@ export default function ProcessingModal({ isOpen, status, message, onClose }: Pr
                     <AlertCircle className="w-12 h-12 text-red-600" />
                   </div>
                   <h3 className="text-xl font-black text-gray-900 mb-2">Transaction Failed</h3>
-                  <p className="text-gray-500 text-sm font-medium mb-8">{message || 'An error occurred while processing your transaction.'}</p>
+                  <p className="text-gray-500 text-sm font-medium mb-8">{friendlyMessage || 'An error occurred while processing your transaction.'}</p>
                   <button 
                     onClick={onClose}
                     className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-sm shadow-xl shadow-red-100 hover:scale-[1.02] transition-transform"

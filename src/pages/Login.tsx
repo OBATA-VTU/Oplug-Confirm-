@@ -4,6 +4,8 @@ import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider } from '../lib/firebase';
 import { User, Lock, Eye, EyeOff, Chrome, LogIn } from 'lucide-react';
 import Logo from '../components/Logo';
+import { getFriendlyErrorMessage } from '../lib/errorHandlers';
+import { useToast } from '../context/ToastContext';
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
@@ -13,6 +15,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   useEffect(() => {
     const savedEmail = localStorage.getItem('remembered_email');
@@ -39,9 +42,12 @@ export default function Login() {
         localStorage.removeItem('remembered_password');
       }
       
+      showToast('success', 'Welcome Back!', 'You have successfully logged in.');
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.message || 'Failed to login');
+      const friendlyMsg = getFriendlyErrorMessage(err);
+      setError(friendlyMsg);
+      showToast('error', 'Login Failed', friendlyMsg);
     } finally {
       setLoading(false);
     }
@@ -50,9 +56,12 @@ export default function Login() {
   const handleGoogleLogin = async () => {
     try {
       await signInWithPopup(auth, googleProvider);
+      showToast('success', 'Welcome Back!', 'You have successfully logged in with Google.');
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.message || 'Google login failed');
+      const friendlyMsg = getFriendlyErrorMessage(err);
+      setError(friendlyMsg);
+      showToast('error', 'Google Login Failed', friendlyMsg);
     }
   };
 
