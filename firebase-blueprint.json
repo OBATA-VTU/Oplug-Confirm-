@@ -79,6 +79,24 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "type", "amount", "frequency", "nextRun"]
+    },
+    "AppSettings": {
+      "title": "App Settings",
+      "description": "Global application configuration.",
+      "type": "object",
+      "properties": {
+        "siteName": { "type": "string" },
+        "siteDescription": { "type": "string" },
+        "announcement": { "type": "string" },
+        "referralBonus": { "type": "number" },
+        "heroImage": { "type": "string" },
+        "fastDeliveryImage": { "type": "string" },
+        "resellerImage": { "type": "string" },
+        "developerImage": { "type": "string" },
+        "fundingImage": { "type": "string" },
+        "supportImage": { "type": "string" },
+        "supportedLogos": { "type": "array", "items": { "type": "string" } }
+      }
     }
   },
   "firestore": {
@@ -93,6 +111,10 @@
     "/scheduled_purchases/{purchaseId}": {
       "schema": "ScheduledPurchase",
       "description": "Scheduled bill payments."
+    },
+    "/settings/{settingId}": {
+      "schema": "AppSettings",
+      "description": "Global settings."
     }
   }
 }

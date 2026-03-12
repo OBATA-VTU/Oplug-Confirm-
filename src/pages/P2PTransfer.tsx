@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { db } from '../lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import PinModal from '../components/PinModal';
 import ProcessingModal from '../components/ProcessingModal';
 
 export default function P2PTransfer() {
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [phone, setPhone] = useState('');
   const [amount, setAmount] = useState('');
@@ -43,6 +45,19 @@ export default function P2PTransfer() {
       // Mock transfer logic
       await new Promise(resolve => setTimeout(resolve, 2000));
       
+      // Record transaction
+      if (user) {
+        await addDoc(collection(db, 'transactions'), {
+          userId: user.uid,
+          type: 'P2P Transfer',
+          amount: Number(amount),
+          status: 'success',
+          description: `Transfer of ₦${amount} to ${phone}${remark ? ' - ' + remark : ''}`,
+          reference: `P2P-${Date.now()}`,
+          createdAt: serverTimestamp()
+        });
+      }
+
       setProcessStatus('success');
       setProcessMessage(`Successfully transferred ₦${amount} to ${phone}`);
       setPhone('');

@@ -1,10 +1,18 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { smmService } from '../services/apiService';
 import { Search, ShoppingCart, Info, ExternalLink, Globe, Plus, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
+import { useAuth } from '../context/AuthContext';
+import { db } from '../lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import PinModal from '../components/PinModal';
+import ProcessingModal from '../components/ProcessingModal';
 
 export default function SmmServices() {
+  const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const [services, setServices] = useState<any[]>([]);
   const [filteredServices, setFilteredServices] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -17,6 +25,13 @@ export default function SmmServices() {
   const [selectedService, setSelectedService] = useState<any>(null);
   const [link, setLink] = useState('');
   const [quantity, setQuantity] = useState('');
+
+  // PIN & Processing states
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [showSetupPinModal, setShowSetupPinModal] = useState(false);
+  const [showProcessing, setShowProcessing] = useState(false);
+  const [processStatus, setProcessStatus] = useState<'processing' | 'success' | 'error'>('processing');
+  const [processMessage, setProcessMessage] = useState('');
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -65,8 +80,20 @@ export default function SmmServices() {
       return;
     }
 
+    if (!profile?.isPinSet) {
+      setShowSetupPinModal(true);
+      return;
+    }
+
+    setShowPinModal(true);
+  };
+
+  const executeOrder = async () => {
     setOrdering(true);
     setMessage({ type: '', text: '' });
+    setShowProcessing(true);
+    setProcessStatus('processing');
+    setProcessMessage('Processing your SMM order...');
 
     try {
       const response = await smmService.addOrder({
@@ -76,15 +103,33 @@ export default function SmmServices() {
       });
 
       if (response.order) {
-        setMessage({ type: 'success', text: `Order placed successfully! Order ID: ${response.order}` });
+        setProcessStatus('success');
+        setProcessMessage(`Order placed successfully! Order ID: ${response.order}`);
+        
+        // Record transaction
+        if (user) {
+          const totalPrice = (Number(selectedService.rate) / 1000) * Number(quantity);
+          await addDoc(collection(db, 'transactions'), {
+            userId: user.uid,
+            type: 'SMM Order',
+            amount: totalPrice,
+            status: 'success',
+            description: `${selectedService.name} - Qty: ${quantity} for ${link}`,
+            reference: response.order.toString(),
+            createdAt: serverTimestamp()
+          });
+        }
+
         setLink('');
         setQuantity('');
         setSelectedService(null);
       } else {
-        setMessage({ type: 'error', text: response.error || 'Failed to place order' });
+        setProcessStatus('error');
+        setProcessMessage(response.error || 'Failed to place order');
       }
     } catch (error: any) {
-      setMessage({ type: 'error', text: error.response?.data?.error || 'An error occurred' });
+      setProcessStatus('error');
+      setProcessMessage(error.response?.data?.error || 'An error occurred during order placement');
     } finally {
       setOrdering(false);
     }
@@ -288,6 +333,35 @@ export default function SmmServices() {
           </motion.div>
         </div>
       )}
+
+      {/* PIN Verification Modal */}
+      <PinModal 
+        isOpen={showPinModal}
+        onClose={() => setShowPinModal(false)}
+        onSuccess={executeOrder}
+        correctPin={profile?.transactionPin}
+        mode="verify"
+        title="Verify Transaction"
+        description={`Enter your 5-digit PIN to authorize SMM order for ${selectedService?.name}`}
+      />
+
+      {/* Setup PIN Modal */}
+      <PinModal 
+        isOpen={showSetupPinModal}
+        onClose={() => setShowSetupPinModal(false)}
+        onSuccess={() => navigate('/profile')}
+        mode="verify"
+        title="PIN Required"
+        description="You need to set a transaction PIN before you can make purchases. Would you like to set it now?"
+      />
+
+      {/* Processing Modal */}
+      <ProcessingModal 
+        isOpen={showProcessing}
+        onClose={() => setShowProcessing(false)}
+        status={processStatus}
+        message={processMessage}
+      />
     </div>
   );
 }

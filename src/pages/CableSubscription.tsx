@@ -8,12 +8,15 @@ import {
 import { vtuService } from '../services/apiService';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/firebase';
-import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, arrayRemove, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { cn } from '../lib/utils';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import PinModal from '../components/PinModal';
+import ProcessingModal from '../components/ProcessingModal';
 
 export default function CableSubscription() {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const [services, setServices] = useState<any[]>([]);
   const [filteredPlans, setFilteredPlans] = useState<any[]>([]);
   const [cable, setCable] = useState('');
@@ -26,6 +29,13 @@ export default function CableSubscription() {
   const [saveBeneficiary, setSaveBeneficiary] = useState(false);
   const [beneficiaryName, setBeneficiaryName] = useState('');
   const [showBeneficiaries, setShowBeneficiaries] = useState(false);
+
+  // PIN & Processing states
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [showSetupPinModal, setShowSetupPinModal] = useState(false);
+  const [showProcessing, setShowProcessing] = useState(false);
+  const [processStatus, setProcessStatus] = useState<'processing' | 'success' | 'error'>('processing');
+  const [processMessage, setProcessMessage] = useState('');
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -85,8 +95,20 @@ export default function CableSubscription() {
       return;
     }
 
+    if (!profile?.isPinSet) {
+      setShowSetupPinModal(true);
+      return;
+    }
+
+    setShowPinModal(true);
+  };
+
+  const executePurchase = async () => {
     setLoading(true);
     setMessage({ type: '', text: '' });
+    setShowProcessing(true);
+    setProcessStatus('processing');
+    setProcessMessage('Processing your cable subscription...');
 
     try {
       const response = await vtuService.buyCable({
@@ -95,8 +117,23 @@ export default function CableSubscription() {
       });
 
       if (response.status === 'success') {
-        setMessage({ type: 'success', text: response.message });
+        setProcessStatus('success');
+        setProcessMessage(response.message || 'Subscription successful!');
         
+        // Record transaction
+        if (user) {
+          const plan = services.find(p => p.serviceID === selectedPlan);
+          await addDoc(collection(db, 'transactions'), {
+            userId: user.uid,
+            type: 'Cable Subscription',
+            amount: plan?.amount || 0,
+            status: 'success',
+            description: `${cable.toUpperCase()} ${plan?.cablePlan} to ${iuc} (${customerName})`,
+            reference: response.reference || `CABLE-${Date.now()}`,
+            createdAt: serverTimestamp()
+          });
+        }
+
         // Save beneficiary if checked
         if (saveBeneficiary && beneficiaryName && user) {
           const userRef = doc(db, 'users', user.uid);
@@ -115,10 +152,12 @@ export default function CableSubscription() {
         setBeneficiaryName('');
         setSaveBeneficiary(false);
       } else {
-        setMessage({ type: 'error', text: response.message || 'Transaction failed' });
+        setProcessStatus('error');
+        setProcessMessage(response.message || 'Transaction failed');
       }
     } catch (error: any) {
-      setMessage({ type: 'error', text: error.response?.data?.message || 'An error occurred' });
+      setProcessStatus('error');
+      setProcessMessage(error.response?.data?.message || 'An error occurred during transaction');
     } finally {
       setLoading(false);
     }
@@ -398,6 +437,35 @@ export default function CableSubscription() {
           </div>
         </div>
       </div>
+      
+      {/* PIN Verification Modal */}
+      <PinModal 
+        isOpen={showPinModal}
+        onClose={() => setShowPinModal(false)}
+        onSuccess={executePurchase}
+        correctPin={profile?.transactionPin}
+        mode="verify"
+        title="Verify Transaction"
+        description={`Enter your 5-digit PIN to authorize cable subscription for ${iuc}`}
+      />
+
+      {/* Setup PIN Modal */}
+      <PinModal 
+        isOpen={showSetupPinModal}
+        onClose={() => setShowSetupPinModal(false)}
+        onSuccess={() => navigate('/profile')}
+        mode="verify"
+        title="PIN Required"
+        description="You need to set a transaction PIN before you can make purchases. Would you like to set it now?"
+      />
+
+      {/* Processing Modal */}
+      <ProcessingModal 
+        isOpen={showProcessing}
+        onClose={() => setShowProcessing(false)}
+        status={processStatus}
+        message={processMessage}
+      />
     </div>
   );
 }

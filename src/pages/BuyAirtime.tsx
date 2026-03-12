@@ -9,7 +9,7 @@ import {
 import { vtuService } from '../services/apiService';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/firebase';
-import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { cn } from '../lib/utils';
 import { Link } from 'react-router-dom';
 import PinModal from '../components/PinModal';
@@ -82,6 +82,20 @@ export default function BuyAirtime() {
         setProcessStatus('success');
         setProcessMessage(response.message || 'Airtime purchase successful!');
         
+        // Record transaction
+        if (user) {
+          const network = services.find(s => s.serviceID === selectedService)?.network || selectedService;
+          await addDoc(collection(db, 'transactions'), {
+            userId: user.uid,
+            type: 'Airtime Purchase',
+            amount: Number(amount),
+            status: 'success',
+            description: `${network.toUpperCase()} ₦${amount} Airtime to ${phone}`,
+            reference: response.reference || `AIRTIME-${Date.now()}`,
+            createdAt: serverTimestamp()
+          });
+        }
+
         // Save beneficiary if checked
         if (saveBeneficiary && beneficiaryName && user) {
           const userRef = doc(db, 'users', user.uid);

@@ -37,10 +37,26 @@ export default function History() {
 
   const filteredTransactions = transactions.filter(tx => {
     const matchesFilter = filter === 'All' || tx.type === filter;
+    const description = tx.description || tx.details || '';
     const matchesSearch = tx.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         (tx.details && tx.details.toLowerCase().includes(searchTerm.toLowerCase()));
+                         description.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesFilter && matchesSearch;
   });
+
+  const formatTimestamp = (timestamp: any) => {
+    const defaultVal = { date: 'N/A', time: 'N/A', full: 'N/A' };
+    if (!timestamp) return defaultVal;
+    try {
+      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      return {
+        date: date.toLocaleDateString(),
+        time: date.toLocaleTimeString(),
+        full: date.toLocaleString()
+      };
+    } catch (e) {
+      return defaultVal;
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -148,7 +164,7 @@ export default function History() {
                         </div>
                         <div>
                           <p className="text-sm font-black text-gray-900">{tx.type}</p>
-                          <p className="text-[10px] font-bold text-gray-400 truncate max-w-[150px]">{tx.details}</p>
+                          <p className="text-[10px] font-bold text-gray-400 truncate max-w-[150px]">{tx.description || tx.details}</p>
                         </div>
                       </div>
                     </td>
@@ -166,8 +182,8 @@ export default function History() {
                     </td>
                     <td className="px-8 py-6">
                       <div className="flex flex-col">
-                        <span className="text-xs font-bold text-gray-900">{new Date(tx.createdAt).toLocaleDateString()}</span>
-                        <span className="text-[10px] font-bold text-gray-400">{new Date(tx.createdAt).toLocaleTimeString()}</span>
+                        <span className="text-xs font-bold text-gray-900">{formatTimestamp(tx.createdAt).date}</span>
+                        <span className="text-[10px] font-bold text-gray-400">{formatTimestamp(tx.createdAt).time}</span>
                       </div>
                     </td>
                     <td className="px-8 py-6">
@@ -257,12 +273,12 @@ export default function History() {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Date & Time</span>
-                    <span className="text-sm font-black text-gray-900">{new Date(selectedTx.createdAt).toLocaleString()}</span>
+                    <span className="text-sm font-black text-gray-900">{formatTimestamp(selectedTx.createdAt).full}</span>
                   </div>
                   <div className="flex flex-col gap-2 pt-4">
                     <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Details</span>
                     <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 text-sm font-bold text-gray-700 leading-relaxed">
-                      {selectedTx.details}
+                      {selectedTx.description || selectedTx.details}
                     </div>
                   </div>
                 </div>

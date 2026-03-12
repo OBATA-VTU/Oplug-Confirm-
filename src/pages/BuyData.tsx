@@ -9,7 +9,7 @@ import {
 import { vtuService } from '../services/apiService';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/firebase';
-import { doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { cn } from '../lib/utils';
 import PinModal from '../components/PinModal';
 import ProcessingModal from '../components/ProcessingModal';
@@ -97,6 +97,23 @@ export default function BuyData() {
         setProcessStatus('success');
         setProcessMessage(response.message);
         
+        // Record transaction
+        if (user) {
+          const plan = services.find(p => p.serviceID === selectedPlan);
+          await addDoc(collection(db, 'transactions'), {
+            userId: user.uid,
+            type: 'Data Purchase',
+            amount: plan?.amount || 0,
+            status: 'success',
+            description: `${network.toUpperCase()} ${plan?.dataPlan} to ${phone}`,
+            reference: response.reference || `DATA-${Date.now()}`,
+            createdAt: serverTimestamp()
+          });
+
+          // Update user balance (in a real app, the backend would do this via webhook or direct write)
+          // For this demo, we'll assume the balance is updated on the server and we just need to refresh or wait
+        }
+
         if (saveBeneficiary && beneficiaryName && user) {
           const userRef = doc(db, 'users', user.uid);
           await updateDoc(userRef, {
