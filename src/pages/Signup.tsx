@@ -3,8 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { createUserWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider, db } from '../lib/firebase';
 import { doc, setDoc, getDocs, collection, query, where } from 'firebase/firestore';
-import { User, Mail, Phone, Lock, Eye, EyeOff, UserPlus, AtSign, Chrome, Smartphone, Users } from 'lucide-react';
-import Logo from '../components/Logo';
+import { User, Mail, Smartphone, Lock, Eye, EyeOff, UserPlus, AtSign, Chrome, Users, ArrowRight } from 'lucide-react';
+import AuthLayout from '../components/AuthLayout';
 import { getFriendlyErrorMessage } from '../lib/errorHandlers';
 import { useToast } from '../context/ToastContext';
 
@@ -91,159 +91,190 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4 py-12">
-      <div className="w-full max-w-md bg-white rounded-[40px] p-8 shadow-xl shadow-gray-200/50 border border-gray-100">
-        <div className="flex flex-col items-center mb-8">
-          <Logo className="mb-6 scale-125" />
-          <h1 className="text-2xl font-bold text-gray-800">Signup</h1>
+    <AuthLayout 
+      title="Create Account" 
+      subtitle="Join Oplug and start enjoying premium services"
+    >
+      {error && (
+        <div className="p-4 bg-red-50 text-red-600 text-xs font-bold rounded-2xl mb-6 border border-red-100 flex items-center gap-2">
+          <div className="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse" />
+          {error}
         </div>
+      )}
 
-        {error && (
-          <div className="p-4 bg-red-50 text-red-600 text-xs font-bold rounded-xl mb-6 border border-red-100">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSignup} className="space-y-4">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <User className="h-5 w-5 text-gray-400" />
+      <form onSubmit={handleSignup} className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="space-y-2">
+          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Full Name</label>
+          <div className="relative group">
+            <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+              <User className="h-5 w-5 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
             </div>
             <input
               type="text"
-              placeholder="Fullname"
+              placeholder="John Doe"
               value={fullname}
               onChange={(e) => setFullname(e.target.value)}
-              className="block w-full pl-12 pr-4 py-4 bg-gray-50 border-b-2 border-gray-200 focus:border-blue-700 focus:outline-none transition-colors text-sm"
+              className="block w-full pl-14 pr-5 py-4 bg-gray-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl focus:outline-none transition-all text-sm font-medium"
               required
             />
           </div>
+        </div>
 
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <AtSign className="h-5 w-5 text-gray-400" />
+        <div className="space-y-2">
+          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Username</label>
+          <div className="relative group">
+            <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+              <AtSign className="h-5 w-5 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
             </div>
             <input
               type="text"
-              placeholder="Username"
+              placeholder="johndoe"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="block w-full pl-12 pr-4 py-4 bg-gray-50 border-b-2 border-gray-200 focus:border-blue-700 focus:outline-none transition-colors text-sm"
+              className="block w-full pl-14 pr-5 py-4 bg-gray-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl focus:outline-none transition-all text-sm font-medium"
               required
             />
           </div>
+        </div>
 
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <Mail className="h-5 w-5 text-gray-400" />
+        <div className="space-y-2">
+          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Email Address</label>
+          <div className="relative group">
+            <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+              <Mail className="h-5 w-5 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
             </div>
             <input
               type="email"
-              placeholder="Email Address"
+              placeholder="name@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="block w-full pl-12 pr-4 py-4 bg-gray-50 border-b-2 border-gray-200 focus:border-blue-700 focus:outline-none transition-colors text-sm"
+              className="block w-full pl-14 pr-5 py-4 bg-gray-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl focus:outline-none transition-all text-sm font-medium"
               required
             />
           </div>
+        </div>
 
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <Smartphone className="h-5 w-5 text-gray-400" />
+        <div className="space-y-2">
+          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Phone Number</label>
+          <div className="relative group">
+            <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+              <Smartphone className="h-5 w-5 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
             </div>
             <input
               type="tel"
-              placeholder="Phone Number"
+              placeholder="08012345678"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="block w-full pl-12 pr-4 py-4 bg-gray-50 border-b-2 border-gray-200 focus:border-blue-700 focus:outline-none transition-colors text-sm"
+              className="block w-full pl-14 pr-5 py-4 bg-gray-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl focus:outline-none transition-all text-sm font-medium"
               required
             />
           </div>
+        </div>
 
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <Users className="h-5 w-5 text-gray-400" />
+        <div className="space-y-2">
+          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Referral (Optional)</label>
+          <div className="relative group">
+            <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+              <Users className="h-5 w-5 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
             </div>
             <input
               type="text"
-              placeholder="Referral Username (Optional)"
+              placeholder="Referral Username"
               value={referralUsername}
               onChange={(e) => setReferralUsername(e.target.value)}
-              className="block w-full pl-12 pr-4 py-4 bg-gray-50 border-b-2 border-gray-200 focus:border-blue-700 focus:outline-none transition-colors text-sm"
+              className="block w-full pl-14 pr-5 py-4 bg-gray-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl focus:outline-none transition-all text-sm font-medium"
             />
           </div>
+        </div>
 
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <Lock className="h-5 w-5 text-gray-400" />
+        <div className="space-y-2">
+          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Password</label>
+          <div className="relative group">
+            <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+              <Lock className="h-5 w-5 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
             </div>
             <input
               type={showPassword ? "text" : "password"}
-              placeholder="Password"
+              placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="block w-full pl-12 pr-12 py-4 bg-gray-50 border-b-2 border-gray-200 focus:border-blue-700 focus:outline-none transition-colors text-sm"
+              className="block w-full pl-14 pr-14 py-4 bg-gray-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl focus:outline-none transition-all text-sm font-medium"
               required
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400"
+              className="absolute inset-y-0 right-0 pr-5 flex items-center text-gray-400 hover:text-blue-600 transition-colors"
             >
               {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
             </button>
           </div>
+        </div>
 
-          <div className="flex items-center gap-2 pt-2">
+        <div className="md:col-span-2 flex items-center gap-3 pt-2">
+          <div className="relative flex items-center">
             <input 
               type="checkbox" 
               id="terms" 
-              className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
+              className="peer sr-only" 
               checked={agreedToTerms}
               onChange={(e) => setAgreedToTerms(e.target.checked)}
               required 
             />
-            <label htmlFor="terms" className="text-xs text-gray-500">
-              I agree to the <Link to="/terms" className="font-bold text-gray-700 hover:underline">Terms of Services</Link>
-            </label>
+            <div className="w-5 h-5 border-2 border-gray-200 rounded-md peer-checked:bg-blue-600 peer-checked:border-blue-600 transition-all" />
+            <div className="absolute inset-0 flex items-center justify-center text-white opacity-0 peer-checked:opacity-100 transition-opacity">
+              <svg className="w-3 h-3 fill-current" viewBox="0 0 20 20"><path d="M0 11l2-2 5 5L18 3l2 2L7 18z"/></svg>
+            </div>
           </div>
-
-          <button 
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-700 text-white font-bold py-4 rounded-2xl hover:bg-blue-800 transition-all shadow-lg shadow-blue-100 active:scale-95 flex items-center justify-center gap-2 mt-4"
-          >
-            {loading ? 'SIGNING UP...' : (
-              <>
-                <UserPlus className="w-5 h-5" />
-                SIGNUP
-              </>
-            )}
-          </button>
-        </form>
-
-        <div className="relative my-8">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-100"></div>
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white px-4 text-gray-400 font-bold">Or continue with</span>
-          </div>
+          <label htmlFor="terms" className="text-xs font-bold text-gray-500">
+            I agree to the <Link to="/terms" className="text-blue-600 hover:underline">Terms of Services</Link>
+          </label>
         </div>
 
         <button 
-          onClick={handleGoogleSignup}
-          className="w-full bg-white border border-gray-200 text-gray-700 font-bold py-4 rounded-2xl hover:bg-gray-50 transition-all flex items-center justify-center gap-3"
+          type="submit"
+          disabled={loading}
+          className="md:col-span-2 w-full bg-blue-700 text-white font-black py-5 rounded-2xl hover:bg-blue-800 transition-all shadow-xl shadow-blue-200 active:scale-[0.98] flex items-center justify-center gap-3 mt-4"
         >
-          <Chrome className="w-5 h-5 text-blue-600" />
-          Google Account
+          {loading ? (
+            <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+          ) : (
+            <>
+              <UserPlus className="w-5 h-5" />
+              CREATE ACCOUNT
+            </>
+          )}
         </button>
+      </form>
 
-        <p className="mt-8 text-center text-sm text-gray-500">
-          Already have an account? <Link to="/login" className="text-blue-600 font-bold hover:underline">Login</Link>
+      <div className="relative my-10">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-gray-100"></div>
+        </div>
+        <div className="relative flex justify-center text-[10px] uppercase tracking-[0.2em] font-black">
+          <span className="bg-white px-6 text-gray-400">Or continue with</span>
+        </div>
+      </div>
+
+      <button 
+        onClick={handleGoogleSignup}
+        className="w-full bg-white border-2 border-gray-100 text-gray-700 font-black py-4 rounded-2xl hover:bg-gray-50 hover:border-gray-200 transition-all flex items-center justify-center gap-3 group"
+      >
+        <Chrome className="w-5 h-5 text-blue-600 group-hover:scale-110 transition-transform" />
+        Google Account
+      </button>
+
+      <div className="mt-10 text-center">
+        <p className="text-sm text-gray-500 font-medium">
+          Already have an account? 
+          <Link to="/login" className="text-blue-600 font-black ml-2 hover:text-blue-700 inline-flex items-center gap-1 group">
+            Login Instead
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          </Link>
         </p>
       </div>
-    </div>
+    </AuthLayout>
+  );
+}
   );
 }

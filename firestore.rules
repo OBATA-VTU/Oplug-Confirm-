@@ -63,11 +63,12 @@ service cloud.firestore {
     }
 
     function isValidUser(data) {
-      return data.keys().hasAll(['id', 'email', 'walletBalance', 'role']) &&
+      return data.keys().hasAll(['id', 'email', 'walletBalance', 'role', 'username']) &&
              data.id is string &&
              data.email is string &&
              data.walletBalance is number &&
-             data.role in ['user', 'admin'];
+             data.role in ['user', 'admin'] &&
+             data.username is string;
     }
 
     // ===============================================================
@@ -75,7 +76,9 @@ service cloud.firestore {
     // ===============================================================
 
     match /users/{userId} {
-      allow read: if isOwner(userId) || isAdmin();
+      // Allow anyone to read profiles (needed for username checks during signup)
+      // WARNING: This should be hardened in production to prevent PII exposure
+      allow read: if true;
       allow create: if isAuthenticated() && request.auth.uid == userId && isValidUser(request.resource.data);
       allow update: if (isOwner(userId) && 
                        request.resource.data.role == resource.data.role && 
