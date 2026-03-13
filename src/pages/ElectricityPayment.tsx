@@ -4,12 +4,12 @@ import {
   Zap, Lightbulb, CreditCard, CheckCircle2, 
   AlertCircle, History, User, Plus, Search, 
   ChevronRight, Bookmark, Trash2, Star, ShieldCheck,
-  Activity
+  Activity, ChevronDown
 } from 'lucide-react';
 import { vtuService } from '../services/apiService';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/firebase';
-import { doc, updateDoc, arrayUnion, arrayRemove, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, collection, addDoc, serverTimestamp, increment } from 'firebase/firestore';
 import { cn } from '../lib/utils';
 import { Link, useNavigate } from 'react-router-dom';
 import PinModal from '../components/PinModal';
@@ -30,6 +30,7 @@ export default function ElectricityPayment() {
   const [saveBeneficiary, setSaveBeneficiary] = useState(false);
   const [beneficiaryName, setBeneficiaryName] = useState('');
   const [showBeneficiaries, setShowBeneficiaries] = useState(false);
+  const [prices, setPrices] = useState<any>(null);
 
   // PIN & Processing states
   const [showPinModal, setShowPinModal] = useState(false);
@@ -37,6 +38,20 @@ export default function ElectricityPayment() {
   const [showProcessing, setShowProcessing] = useState(false);
   const [processStatus, setProcessStatus] = useState<'processing' | 'success' | 'error'>('processing');
   const [processMessage, setProcessMessage] = useState('');
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const snap = await getDoc(doc(db, 'settings', 'prices'));
+        if (snap.exists()) {
+          setPrices(snap.data());
+        }
+      } catch (err) {
+        console.error('Error fetching prices:', err);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -51,6 +66,18 @@ export default function ElectricityPayment() {
     };
     fetchServices();
   }, []);
+
+  const calculatePrice = (base: number) => {
+    if (!prices?.electricity) return base;
+    const { markup, resellerDiscount } = prices.electricity;
+    const isReseller = profile?.role?.toLowerCase() === 'reseller';
+    
+    let price = base + markup; // Electricity is usually a flat fee markup
+    if (isReseller) {
+      price -= resellerDiscount;
+    }
+    return Math.ceil(price);
+  };
 
   const handleValidate = async () => {
     if (!selectedService || !meterNum) {
@@ -88,6 +115,12 @@ export default function ElectricityPayment() {
       return;
     }
 
+    const finalAmount = calculatePrice(Number(amount));
+    if ((profile?.balance || 0) < finalAmount) {
+      setMessage({ type: 'error', text: 'Insufficient balance' });
+      return;
+    }
+
     if (!profile?.isPinSet) {
       setShowSetupPinModal(true);
       return;
@@ -104,6 +137,7 @@ export default function ElectricityPayment() {
     setProcessMessage('Processing your electricity payment...');
 
     try {
+      const finalAmount = calculatePrice(Number(amount));
       const response = await vtuService.payElectricity({
         serviceID: selectedService,
         meterNum: meterNum,
@@ -121,12 +155,17 @@ export default function ElectricityPayment() {
           await addDoc(collection(db, 'transactions'), {
             userId: user.uid,
             type: 'Electricity Payment',
-            amount: Number(amount),
+            amount: finalAmount,
             status: 'success',
             description: `${disco} ₦${amount} for Meter: ${meterNum} (${customerName})`,
             reference: response.reference || `ELEC-${Date.now()}`,
             token: response.data.token || null,
             createdAt: serverTimestamp()
+          });
+
+          // Deduct from local balance
+          await updateDoc(doc(db, 'users', user.uid), {
+            balance: increment(-finalAmount)
           });
         }
 
@@ -217,30 +256,21 @@ export default function ElectricityPayment() {
               {/* Disco Selection */}
               <div className="space-y-4">
                 <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Select Disco</label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {services.map((s) => (
-                    <button
-                      key={s.serviceID}
-                      onClick={() => setSelectedService(s.serviceID)}
-                      className={cn(
-                        "flex flex-col items-center gap-3 p-4 rounded-3xl border-2 transition-all group",
-                        selectedService === s.serviceID 
-                          ? "border-blue-700 bg-blue-50/50" 
-                          : "border-gray-50 bg-gray-50/50 hover:border-gray-200"
-                      )}
-                    >
-                      <div className={cn(
-                        "w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm transition-transform group-hover:scale-110",
-                        selectedService === s.serviceID ? "bg-blue-700 text-white" : "bg-white text-gray-400"
-                      )}>
-                        <Zap className="w-6 h-6" />
-                      </div>
-                      <span className={cn(
-                        "text-[10px] font-black uppercase tracking-widest text-center",
-                        selectedService === s.serviceID ? "text-blue-700" : "text-gray-400"
-                      )}>{s.disco}</span>
-                    </button>
-                  ))}
+                <div className="relative">
+                  <Zap className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 z-10" />
+                  <select
+                    value={selectedService}
+                    onChange={(e) => setSelectedService(e.target.value)}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-12 pr-10 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none cursor-pointer"
+                  >
+                    <option value="">Choose a disco provider</option>
+                    {services.map((s) => (
+                      <option key={s.serviceID} value={s.serviceID}>
+                        {s.disco.toUpperCase()}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
                 </div>
               </div>
 

@@ -14,6 +14,7 @@ import CableSubscription from './pages/CableSubscription';
 import ElectricityPayment from './pages/ElectricityPayment';
 import EducationPin from './pages/EducationPin';
 import SmmServices from './pages/SmmServices';
+import Upgrade from './pages/Upgrade';
 import FundWallet from './pages/FundWallet';
 import Support from './pages/Support';
 import ReferAndEarn from './pages/ReferAndEarn';
@@ -151,6 +152,7 @@ function AppRoutes() {
         <Route path="/electricity" element={<ElectricityPayment />} />
         <Route path="/education" element={<EducationPin />} />
         <Route path="/smm" element={<SmmServices />} />
+        <Route path="/upgrade" element={<Upgrade />} />
         <Route path="/transfer" element={<P2PTransfer />} />
         <Route path="/support" element={<Support />} />
         <Route path="/refer" element={<ReferAndEarn />} />

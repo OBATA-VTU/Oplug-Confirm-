@@ -200,3 +200,33 @@ export const fundingService = {
     return response.data;
   }
 };
+
+export const emailService = {
+  async sendWelcomeEmail(email: string, name: string) {
+    try {
+      const response = await axios.post('/api/email/welcome', { email, name });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to send welcome email:', error);
+      return null;
+    }
+  }
+};
+
+export const notificationService = {
+  async createNotification(data: { userId: string; title: string; message: string; type?: string }) {
+    try {
+      const notifRef = doc(collection(db, 'notifications'));
+      await setDoc(notifRef, {
+        ...data,
+        id: notifRef.id,
+        read: false,
+        createdAt: new Date()
+      });
+      return true;
+    } catch (error) {
+      console.error('Failed to create notification:', error);
+      return false;
+    }
+  }
+};

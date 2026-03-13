@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   LayoutDashboard, 
   Phone, 
@@ -24,10 +25,15 @@ import {
   ShoppingCart,
   ShieldAlert,
   Shield,
-  Grid
+  Grid,
+  CheckCircle2,
+  Info,
+  AlertCircle
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
+import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, writeBatch } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 import Logo from './Logo';
 
@@ -55,9 +61,40 @@ const secondaryItems = [
 
 export default function Layout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { profile, logout } = useAuth();
+  const { profile, logout, user } = useAuth();
+
+  useEffect(() => {
+    if (!user) return;
+
+    const q = query(
+      collection(db, 'notifications'),
+      where('userId', '==', user.uid),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const notifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setNotifications(notifs);
+      setUnreadCount(notifs.filter((n: any) => !n.read).length);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  const markAllAsRead = async () => {
+    if (!user || unreadCount === 0) return;
+    const batch = writeBatch(db);
+    notifications.filter(n => !n.read).forEach(n => {
+      batch.update(doc(db, 'notifications', n.id), { read: true });
+    });
+    await batch.commit();
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -135,7 +172,7 @@ export default function Layout() {
                 </Link>
               ))}
               
-              {profile?.isAdmin && (
+              {profile?.role === 'admin' && (
                 <>
                   <div className="h-px bg-white/5 my-6 mx-4" />
                   <p className="px-4 text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mb-4">Administration</p>
@@ -165,8 +202,12 @@ export default function Layout() {
             </div>
             <div className="bg-white/5 rounded-[2rem] p-4 mb-6">
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-xs font-bold">
-                  {profile?.fullName?.charAt(0) || profile?.username?.charAt(0)}
+                <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-xs font-bold overflow-hidden">
+                  {profile?.photoURL ? (
+                    <img src={profile.photoURL} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    profile?.fullName?.charAt(0) || profile?.username?.charAt(0)
+                  )}
                 </div>
                 <div className="flex-1 overflow-hidden">
                   <p className="text-sm font-bold truncate">{profile?.fullName || profile?.username}</p>
@@ -197,19 +238,152 @@ export default function Layout() {
           <div className="flex-1 lg:flex-none" />
 
           <div className="flex items-center gap-4">
-            <button className="relative p-2 text-gray-500 hover:bg-gray-100 rounded-full">
-              <Bell className="w-6 h-6" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-blue-600 rounded-full border-2 border-white" />
-            </button>
-            <div className="flex items-center gap-2 pl-2 border-l border-gray-200">
-              <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
-                <User className="w-5 h-5 text-gray-500" />
+            <div className="relative">
+              <button 
+                onClick={() => {
+                  setIsNotificationsOpen(!isNotificationsOpen);
+                  if (!isNotificationsOpen) markAllAsRead();
+                }}
+                className="relative p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <Bell className="w-6 h-6" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-2 right-2 w-4 h-4 bg-red-600 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Notifications Dropdown */}
+              <AnimatePresence>
+                {isNotificationsOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setIsNotificationsOpen(false)} />
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      className="absolute right-0 mt-2 w-80 bg-white rounded-3xl shadow-2xl border border-gray-100 z-20 overflow-hidden"
+                    >
+                      <div className="p-5 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
+                        <h3 className="font-bold text-sm">Notifications</h3>
+                        <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded-full uppercase tracking-wider">
+                          {notifications.length} Total
+                        </span>
+                      </div>
+                      <div className="max-h-[400px] overflow-y-auto">
+                        {notifications.length > 0 ? (
+                          notifications.map((notif) => (
+                            <div key={notif.id} className={cn(
+                              "p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors flex gap-3",
+                              !notif.read && "bg-blue-50/30"
+                            )}>
+                              <div className={cn(
+                                "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
+                                notif.type === 'success' ? "bg-emerald-100 text-emerald-600" :
+                                notif.type === 'error' ? "bg-red-100 text-red-600" :
+                                "bg-blue-100 text-blue-600"
+                              )}>
+                                {notif.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> :
+                                 notif.type === 'error' ? <AlertCircle className="w-5 h-5" /> :
+                                 <Info className="w-5 h-5" />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-bold text-gray-900 mb-0.5">{notif.title}</p>
+                                <p className="text-[11px] text-gray-500 leading-relaxed">{notif.message}</p>
+                                <p className="text-[9px] text-gray-400 mt-2 font-medium">
+                                  {notif.createdAt?.toDate ? new Date(notif.createdAt.toDate()).toLocaleString() : 'Just now'}
+                                </p>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="p-10 text-center">
+                            <Bell className="w-10 h-10 text-gray-200 mx-auto mb-3" />
+                            <p className="text-xs text-gray-400 font-medium">No notifications yet</p>
+                          </div>
+                        )}
+                      </div>
+                      <Link 
+                        to="/profile/notifications" 
+                        onClick={() => setIsNotificationsOpen(false)}
+                        className="block p-4 text-center text-xs font-bold text-blue-600 hover:bg-gray-50 transition-colors"
+                      >
+                        View All Notifications
+                      </Link>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <div className="relative">
+              <div 
+                className="flex items-center gap-2 pl-2 border-l border-gray-200 cursor-pointer group" 
+                onClick={() => setIsProfileOpen(!isProfileOpen)}
+              >
+                <div className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden border-2 border-transparent group-hover:border-blue-600 transition-all">
+                  {profile?.photoURL ? (
+                    <img src={profile.photoURL} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="w-5 h-5 text-gray-400" />
+                  )}
+                </div>
+                <div className="hidden sm:block text-left">
+                  <p className="text-xs font-bold group-hover:text-blue-600 transition-colors">{profile?.fullName || profile?.username}</p>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-widest font-black">{profile?.role}</p>
+                </div>
+                <ChevronDown className={cn("w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-all", isProfileOpen && "rotate-180")} />
               </div>
-              <div className="hidden sm:block text-left">
-                <p className="text-xs font-semibold">{profile?.fullName || profile?.username}</p>
-                <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">{profile?.role}</p>
-              </div>
-              <ChevronDown className="w-4 h-4 text-gray-400" />
+
+              <AnimatePresence>
+                {isProfileOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setIsProfileOpen(false)} />
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 z-20 overflow-hidden"
+                    >
+                      <div className="p-4 border-b border-gray-50 bg-gray-50/50">
+                        <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Account</p>
+                        <p className="text-sm font-bold text-gray-900 truncate">{profile?.email}</p>
+                      </div>
+                      <div className="p-2">
+                        <button 
+                          onClick={() => {
+                            navigate('/profile');
+                            setIsProfileOpen(false);
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-gray-600 hover:bg-gray-50 rounded-xl transition-colors"
+                        >
+                          <User className="w-4 h-4 text-blue-600" />
+                          My Profile
+                        </button>
+                        <button 
+                          onClick={() => {
+                            navigate('/history');
+                            setIsProfileOpen(false);
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-gray-600 hover:bg-gray-50 rounded-xl transition-colors"
+                        >
+                          <History className="w-4 h-4 text-blue-600" />
+                          Transactions
+                        </button>
+                        <div className="h-px bg-gray-50 my-2" />
+                        <button 
+                          onClick={handleLogout}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          Sign Out
+                        </button>
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </header>

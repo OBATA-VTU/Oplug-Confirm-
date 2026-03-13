@@ -7,7 +7,7 @@ import { User, Mail, Smartphone, Lock, Eye, EyeOff, UserPlus, AtSign, Chrome, Us
 import AuthLayout from '../components/AuthLayout';
 import { getFriendlyErrorMessage, handleFirestoreError, OperationType } from '../lib/errorHandlers';
 import { useToast } from '../context/ToastContext';
-import { fundingService } from '../services/apiService';
+import { fundingService, emailService, notificationService } from '../services/apiService';
 
 export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
@@ -92,19 +92,30 @@ export default function Signup() {
           const account = palmpayRes.data.account[0];
           await updateDoc(doc(db, 'users', firebaseUser.uid), {
             virtualAccount: {
-              account_name: account.account_name,
-              account_number: account.account_number,
-              bank_id: account.bank_id,
-              bank_name: account.bank_name,
-              reference: account.reference
+              account_name: account.account_name || 'N/A',
+              account_number: account.account_number || 'N/A',
+              bank_id: account.bank_id || 'N/A',
+              bank_name: account.bank_name || 'N/A',
+              reference: account.reference || `REF_${Date.now()}`
             },
             isProfileComplete: true
+          });
+
+          // Create notification
+          await notificationService.createNotification({
+            userId: firebaseUser.uid,
+            title: 'Virtual Account Generated',
+            message: `Your PalmPay virtual account (${account.account_number}) has been generated successfully.`,
+            type: 'success'
           });
         }
       } catch (vErr) {
         console.error('Virtual account generation failed:', vErr);
         // We don't block signup if virtual account fails, user can try later in dashboard
       }
+
+      // Send Welcome Email
+      emailService.sendWelcomeEmail(email.toLowerCase(), firstName);
 
       showToast('success', 'Account Created!', 'Welcome to Oplug! Your account and virtual funding account are ready.');
       navigate('/dashboard');

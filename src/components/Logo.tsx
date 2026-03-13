@@ -18,10 +18,13 @@ export default function Logo({ className, iconOnly = false, variant = 'default' 
           "relative w-12 h-12 rounded-full border-4 flex items-center justify-center transition-all duration-500 group-hover:rotate-180 shadow-lg",
           isWhite ? "border-white" : isDark ? "border-gray-900" : "border-blue-700"
         )}>
-          {/* Inner Wire/Plug element */}
-          <div className="flex gap-1">
-            <div className={cn("w-1.5 h-4 rounded-full animate-pulse", isWhite || isDark ? "bg-blue-600" : "bg-white")} />
-            <div className={cn("w-1.5 h-4 rounded-full", isWhite || isDark ? "bg-blue-400" : "bg-blue-200")} />
+          {/* Inner Plug element */}
+          <div className="flex flex-col items-center gap-0.5">
+            <div className="flex gap-1">
+              <div className={cn("w-1.5 h-3 rounded-t-full", isWhite || isDark ? "bg-blue-600" : "bg-white")} />
+              <div className={cn("w-1.5 h-3 rounded-t-full", isWhite || isDark ? "bg-blue-600" : "bg-white")} />
+            </div>
+            <div className={cn("w-4 h-3 rounded-b-lg", isWhite || isDark ? "bg-blue-400" : "bg-blue-200")} />
           </div>
           
           {/* Sparkle */}

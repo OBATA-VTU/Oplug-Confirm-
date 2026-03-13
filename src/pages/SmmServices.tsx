@@ -6,7 +6,7 @@ import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, increment } from 'firebase/firestore';
 import PinModal from '../components/PinModal';
 import ProcessingModal from '../components/ProcessingModal';
 
@@ -32,6 +32,21 @@ export default function SmmServices() {
   const [showProcessing, setShowProcessing] = useState(false);
   const [processStatus, setProcessStatus] = useState<'processing' | 'success' | 'error'>('processing');
   const [processMessage, setProcessMessage] = useState('');
+  const [prices, setPrices] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const snap = await getDoc(doc(db, 'settings', 'prices'));
+        if (snap.exists()) {
+          setPrices(snap.data());
+        }
+      } catch (err) {
+        console.error('Error fetching prices:', err);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -74,9 +89,29 @@ export default function SmmServices() {
     setFilteredServices(result);
   }, [searchTerm, selectedCategory, services]);
 
+  const calculatePrice = (baseRate: number) => {
+    if (!prices?.smm) return baseRate;
+    const { markup, resellerDiscount } = prices.smm;
+    const isReseller = profile?.role?.toLowerCase() === 'reseller';
+    
+    let price = baseRate * (1 + markup / 100);
+    if (isReseller) {
+      price = price * (1 - resellerDiscount / 100);
+    }
+    return Math.ceil(price);
+  };
+
   const handleOrder = async () => {
     if (!selectedService || !link || !quantity) {
       setMessage({ type: 'error', text: 'Please fill all fields' });
+      return;
+    }
+
+    const unitPrice = calculatePrice(Number(selectedService.rate));
+    const totalPrice = (unitPrice / 1000) * Number(quantity);
+
+    if ((profile?.balance || 0) < totalPrice) {
+      setMessage({ type: 'error', text: 'Insufficient balance' });
       return;
     }
 
@@ -96,6 +131,9 @@ export default function SmmServices() {
     setProcessMessage('Processing your SMM order...');
 
     try {
+      const unitPrice = calculatePrice(Number(selectedService.rate));
+      const totalPrice = (unitPrice / 1000) * Number(quantity);
+
       const response = await smmService.addOrder({
         service: selectedService.service,
         link: link,
@@ -108,7 +146,6 @@ export default function SmmServices() {
         
         // Record transaction
         if (user) {
-          const totalPrice = (Number(selectedService.rate) / 1000) * Number(quantity);
           await addDoc(collection(db, 'transactions'), {
             userId: user.uid,
             type: 'SMM Order',
@@ -117,6 +154,11 @@ export default function SmmServices() {
             description: `${selectedService.name} - Qty: ${quantity} for ${link}`,
             reference: response.order.toString(),
             createdAt: serverTimestamp()
+          });
+
+          // Deduct from local balance
+          await updateDoc(doc(db, 'users', user.uid), {
+            balance: increment(-totalPrice)
           });
         }
 
@@ -200,7 +242,7 @@ export default function SmmServices() {
                   </span>
                   <div className="flex flex-col items-end">
                     <span className="text-xs font-bold text-gray-400">Rate/1k</span>
-                    <span className="text-lg font-black text-gray-900">₦{service.rate}</span>
+                    <span className="text-lg font-black text-gray-900">₦{calculatePrice(Number(service.rate))}</span>
                   </div>
                 </div>
                 
@@ -267,14 +309,14 @@ export default function SmmServices() {
               )}
 
               <div className="space-y-6">
-                <div className="p-6 bg-blue-50 rounded-3xl border border-blue-100">
-                  <p className="text-[10px] font-black text-blue-700 uppercase tracking-widest mb-2">Service Selected</p>
-                  <p className="text-sm font-black text-blue-900 leading-relaxed mb-3">{selectedService.name}</p>
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-1 bg-white rounded-lg text-[10px] font-black text-blue-700">₦{selectedService.rate}/1k</span>
-                    <span className="px-2 py-1 bg-white rounded-lg text-[10px] font-black text-blue-700">Min: {selectedService.min}</span>
+                  <div className="p-6 bg-blue-50 rounded-3xl border border-blue-100">
+                    <p className="text-[10px] font-black text-blue-700 uppercase tracking-widest mb-2">Service Selected</p>
+                    <p className="text-sm font-black text-blue-900 leading-relaxed mb-3">{selectedService.name}</p>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-1 bg-white rounded-lg text-[10px] font-black text-blue-700">₦{calculatePrice(Number(selectedService.rate))}/1k</span>
+                      <span className="px-2 py-1 bg-white rounded-lg text-[10px] font-black text-blue-700">Min: {selectedService.min}</span>
+                    </div>
                   </div>
-                </div>
 
                 <div className="space-y-2">
                   <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Target Link</label>
@@ -304,12 +346,12 @@ export default function SmmServices() {
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-gray-100">
+                  <div className="pt-4 border-t border-gray-100">
                   <div className="flex justify-between items-center mb-6">
                     <span className="text-sm font-bold text-gray-500 uppercase tracking-widest">Total Price</span>
                     <div className="text-right">
                       <span className="text-3xl font-black text-gray-900">
-                        ₦{((Number(selectedService.rate) / 1000) * Number(quantity || 0)).toFixed(2)}
+                        ₦{((calculatePrice(Number(selectedService.rate)) / 1000) * Number(quantity || 0)).toFixed(2)}
                       </span>
                     </div>
                   </div>

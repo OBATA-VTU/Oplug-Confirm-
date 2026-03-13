@@ -40,17 +40,36 @@ export default function Pricing() {
 
   // Mock data for display if Firestore is empty or for services not in settings
   const defaultServices = [
-    { id: 'MTN_1GB', name: 'MTN 1GB (SME)', category: 'data', price: 250, duration: '30 Days' },
-    { id: 'MTN_2GB', name: 'MTN 2GB (SME)', category: 'data', price: 500, duration: '30 Days' },
-    { id: 'AIRTEL_1GB', name: 'Airtel 1GB (Gifting)', category: 'data', price: 300, duration: '30 Days' },
-    { id: 'GLO_1GB', name: 'Glo 1GB (SME)', category: 'data', price: 240, duration: '30 Days' },
-    { id: 'DSTV_COMPACT', name: 'DSTV Compact', category: 'cable', price: 10500, duration: 'Monthly' },
-    { id: 'GOTV_JOLLI', name: 'GOTV Jolli', category: 'cable', price: 3300, duration: 'Monthly' },
-    { id: 'WAEC_PIN', name: 'WAEC Result Checker', category: 'education', price: 3500, duration: 'Instant' },
-    { id: 'NECO_PIN', name: 'NECO Result Checker', category: 'education', price: 1200, duration: 'Instant' },
-    { id: 'IG_LIKES_1K', name: 'Instagram Likes (1K)', category: 'smm', price: 450, duration: '1-2 Hours' },
-    { id: 'IG_FOLLOW_1K', name: 'Instagram Followers (1K)', category: 'smm', price: 1200, duration: '24 Hours' },
+    { id: 'MTN_1GB', name: 'MTN 1GB (SME)', category: 'data', basePrice: 230, duration: '30 Days' },
+    { id: 'MTN_2GB', name: 'MTN 2GB (SME)', category: 'data', basePrice: 460, duration: '30 Days' },
+    { id: 'AIRTEL_1GB', name: 'Airtel 1GB (Gifting)', category: 'data', basePrice: 280, duration: '30 Days' },
+    { id: 'GLO_1GB', name: 'Glo 1GB (SME)', category: 'data', basePrice: 220, duration: '30 Days' },
+    { id: 'DSTV_COMPACT', name: 'DSTV Compact', category: 'cable', basePrice: 10500, duration: 'Monthly' },
+    { id: 'GOTV_JOLLI', name: 'GOTV Jolli', category: 'cable', basePrice: 3300, duration: 'Monthly' },
+    { id: 'WAEC_PIN', name: 'WAEC Result Checker', category: 'education', basePrice: 3500, duration: 'Instant' },
+    { id: 'NECO_PIN', name: 'NECO Result Checker', category: 'education', basePrice: 1200, duration: 'Instant' },
+    { id: 'IG_LIKES_1K', name: 'Instagram Likes (1K)', category: 'smm', basePrice: 400, duration: '1-2 Hours' },
+    { id: 'IG_FOLLOW_1K', name: 'Instagram Followers (1K)', category: 'smm', basePrice: 1000, duration: '24 Hours' },
   ];
+
+  const calculatePrice = (base: number, category: string, type: 'smart' | 'reseller') => {
+    if (!prices) return base;
+    const config = prices[category] || { markup: 0, resellerDiscount: 0 };
+    
+    let price = base;
+    if (category === 'cable' || category === 'electricity' || category === 'education') {
+      price = base + config.markup;
+      if (type === 'reseller') {
+        price -= config.resellerDiscount;
+      }
+    } else {
+      price = base * (1 + config.markup / 100);
+      if (type === 'reseller') {
+        price = price * (1 - config.resellerDiscount / 100);
+      }
+    }
+    return Math.ceil(price);
+  };
 
   const filteredServices = defaultServices.filter(service => {
     const matchesCategory = activeCategory === 'all' || service.category === activeCategory;
@@ -116,11 +135,11 @@ export default function Pricing() {
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-gray-50/50 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
-                  <th className="px-8 py-6">Service ID</th>
                   <th className="px-8 py-6">Service Name</th>
                   <th className="px-8 py-6">Category</th>
-                  <th className="px-8 py-6">Price</th>
-                  <th className="px-8 py-6">Validity/Speed</th>
+                  <th className="px-8 py-6 text-blue-600">{prices?.smartUserLabel || 'Smart User'}</th>
+                  <th className="px-8 py-6 text-emerald-600">{prices?.resellerLabel || 'Reseller'}</th>
+                  <th className="px-8 py-6">Validity</th>
                   <th className="px-8 py-6">Status</th>
                 </tr>
               </thead>
@@ -134,12 +153,8 @@ export default function Pricing() {
                     className="hover:bg-gray-50/50 transition-colors group"
                   >
                     <td className="px-8 py-6">
-                      <span className="font-mono text-xs font-bold text-blue-700 bg-blue-50 px-3 py-1 rounded-lg">
-                        {service.id}
-                      </span>
-                    </td>
-                    <td className="px-8 py-6">
                       <p className="text-sm font-black text-gray-900">{service.name}</p>
+                      <p className="text-[10px] font-mono text-gray-400">{service.id}</p>
                     </td>
                     <td className="px-8 py-6">
                       <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 bg-gray-100 px-3 py-1 rounded-full">
@@ -147,7 +162,10 @@ export default function Pricing() {
                       </span>
                     </td>
                     <td className="px-8 py-6">
-                      <p className="text-lg font-black text-gray-900">₦{service.price.toLocaleString()}</p>
+                      <p className="text-sm font-black text-blue-700">₦{calculatePrice(service.basePrice, service.category, 'smart').toLocaleString()}</p>
+                    </td>
+                    <td className="px-8 py-6">
+                      <p className="text-sm font-black text-emerald-700">₦{calculatePrice(service.basePrice, service.category, 'reseller').toLocaleString()}</p>
                     </td>
                     <td className="px-8 py-6">
                       <p className="text-sm text-gray-500 font-medium">{service.duration}</p>

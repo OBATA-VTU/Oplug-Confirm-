@@ -69,11 +69,11 @@ export default function ProfileSetupModal() {
         lastName: formData.lastName,
         phone: formData.phone,
         virtualAccount: {
-          account_name: account.account_name,
-          account_number: account.account_number,
-          bank_id: account.bank_id,
-          bank_name: account.bank_name,
-          reference: account.reference
+          account_name: account.account_name || 'N/A',
+          account_number: account.account_number || 'N/A',
+          bank_id: account.bank_id || 'N/A',
+          bank_name: account.bank_name || 'N/A',
+          reference: account.reference || `REF_${Date.now()}`
         },
         isProfileComplete: true
       });

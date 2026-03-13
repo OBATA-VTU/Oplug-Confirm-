@@ -89,6 +89,9 @@
         "siteDescription": { "type": "string" },
         "announcement": { "type": "string" },
         "referralBonus": { "type": "number" },
+        "resellerUpgradeFee": { "type": "number" },
+        "smartUserPackageName": { "type": "string" },
+        "resellerPackageName": { "type": "string" },
         "heroImage": { "type": "string" },
         "fastDeliveryImage": { "type": "string" },
         "resellerImage": { "type": "string" },
@@ -96,6 +99,36 @@
         "fundingImage": { "type": "string" },
         "supportImage": { "type": "string" },
         "supportedLogos": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "User notifications.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string" },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "message", "createdAt"]
+    },
+    "PriceSetting": {
+      "title": "Price Setting",
+      "description": "Service pricing and discounts.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "serviceType": { "type": "string" },
+        "network": { "type": "string" },
+        "planName": { "type": "string" },
+        "userPrice": { "type": "number" },
+        "resellerPrice": { "type": "number" },
+        "resellerDiscount": { "type": "number" },
+        "profitMargin": { "type": "number" }
       }
     }
   },
@@ -115,6 +148,14 @@
     "/settings/{settingId}": {
       "schema": "AppSettings",
       "description": "Global settings."
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "User notifications."
+    },
+    "/prices/{priceId}": {
+      "schema": "PriceSetting",
+      "description": "Service pricing."
     }
   }
 }

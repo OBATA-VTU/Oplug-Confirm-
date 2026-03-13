@@ -4,12 +4,12 @@ import { motion } from 'motion/react';
 import { 
   Smartphone, Phone, CreditCard, CheckCircle2, 
   AlertCircle, History, User, Plus, Search, 
-  ChevronRight, Bookmark, Trash2, Star
+  ChevronRight, Bookmark, Trash2, Star, ChevronDown
 } from 'lucide-react';
 import { vtuService } from '../services/apiService';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/firebase';
-import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, collection, addDoc, serverTimestamp, increment } from 'firebase/firestore';
 import { cn } from '../lib/utils';
 import { Link } from 'react-router-dom';
 import PinModal from '../components/PinModal';
@@ -27,6 +27,7 @@ export default function BuyAirtime() {
   const [saveBeneficiary, setSaveBeneficiary] = useState(false);
   const [beneficiaryName, setBeneficiaryName] = useState('');
   const [showBeneficiaries, setShowBeneficiaries] = useState(false);
+  const [prices, setPrices] = useState<any>(null);
 
   // PIN & Processing states
   const [showPinModal, setShowPinModal] = useState(false);
@@ -34,6 +35,20 @@ export default function BuyAirtime() {
   const [showProcessing, setShowProcessing] = useState(false);
   const [processStatus, setProcessStatus] = useState<'processing' | 'success' | 'error'>('processing');
   const [processMessage, setProcessMessage] = useState('');
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const snap = await getDoc(doc(db, 'settings', 'prices'));
+        if (snap.exists()) {
+          setPrices(snap.data());
+        }
+      } catch (err) {
+        console.error('Error fetching prices:', err);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -49,9 +64,27 @@ export default function BuyAirtime() {
     fetchServices();
   }, []);
 
+  const calculatePrice = (base: number) => {
+    if (!prices?.airtime) return base;
+    const { markup, resellerDiscount } = prices.airtime;
+    const isReseller = profile?.role?.toLowerCase() === 'reseller';
+    
+    let price = base * (1 + markup / 100);
+    if (isReseller) {
+      price = price * (1 - resellerDiscount / 100);
+    }
+    return Math.ceil(price);
+  };
+
   const handlePurchase = async () => {
     if (!selectedService || !amount || !phone) {
       setMessage({ type: 'error', text: 'Please fill all fields' });
+      return;
+    }
+
+    const finalAmount = calculatePrice(Number(amount));
+    if ((profile?.balance || 0) < finalAmount) {
+      setMessage({ type: 'error', text: 'Insufficient balance' });
       return;
     }
 
@@ -72,6 +105,7 @@ export default function BuyAirtime() {
     setProcessMessage('Processing your airtime purchase...');
 
     try {
+      const finalAmount = calculatePrice(Number(amount));
       const response = await vtuService.buyAirtime({
         serviceID: selectedService,
         amount: Number(amount),
@@ -88,11 +122,16 @@ export default function BuyAirtime() {
           await addDoc(collection(db, 'transactions'), {
             userId: user.uid,
             type: 'Airtime Purchase',
-            amount: Number(amount),
+            amount: finalAmount,
             status: 'success',
             description: `${network.toUpperCase()} ₦${amount} Airtime to ${phone}`,
             reference: response.reference || `AIRTIME-${Date.now()}`,
             createdAt: serverTimestamp()
+          });
+
+          // Deduct from local balance
+          await updateDoc(doc(db, 'users', user.uid), {
+            balance: increment(-finalAmount)
           });
         }
 
@@ -181,30 +220,21 @@ export default function BuyAirtime() {
               {/* Network Selection */}
               <div className="space-y-4">
                 <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Select Network</label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  {services.map((s) => (
-                    <button
-                      key={s.serviceID}
-                      onClick={() => setSelectedService(s.serviceID)}
-                      className={cn(
-                        "flex flex-col items-center gap-3 p-4 rounded-3xl border-2 transition-all group",
-                        selectedService === s.serviceID 
-                          ? "border-blue-700 bg-blue-50/50" 
-                          : "border-gray-50 bg-gray-50/50 hover:border-gray-200"
-                      )}
-                    >
-                      <div className={cn(
-                        "w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm transition-transform group-hover:scale-110",
-                        selectedService === s.serviceID ? "bg-blue-700 text-white" : "bg-white text-gray-400"
-                      )}>
-                        <Smartphone className="w-6 h-6" />
-                      </div>
-                      <span className={cn(
-                        "text-[10px] font-black uppercase tracking-widest",
-                        selectedService === s.serviceID ? "text-blue-700" : "text-gray-400"
-                      )}>{s.network}</span>
-                    </button>
-                  ))}
+                <div className="relative">
+                  <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 z-10" />
+                  <select
+                    value={selectedService}
+                    onChange={(e) => setSelectedService(e.target.value)}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-12 pr-10 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none cursor-pointer"
+                  >
+                    <option value="">Choose a network provider</option>
+                    {services.map((s) => (
+                      <option key={s.serviceID} value={s.serviceID}>
+                        {s.network.toUpperCase()}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
                 </div>
               </div>
 
@@ -221,6 +251,10 @@ export default function BuyAirtime() {
                       onChange={(e) => setAmount(e.target.value)}
                       className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                     />
+                  </div>
+                  <div className="mt-2 text-[10px] font-bold text-gray-400 flex justify-between px-2">
+                    <span>You will be charged: ₦{calculatePrice(Number(amount) || 0)}</span>
+                    <span>Balance: ₦{profile?.balance?.toLocaleString() || '0.00'}</span>
                   </div>
                 </div>
                 <div className="space-y-2">

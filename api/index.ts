@@ -1,11 +1,17 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import axios from 'axios';
+import Mailjet from 'node-mailjet';
 
 dotenv.config();
 
 export const app = express();
 app.use(express.json());
+
+const mailjet = Mailjet.apiConnect(
+  process.env.MAILJET_API_KEY || '',
+  process.env.MAILJET_SECRET_KEY || ''
+);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
@@ -165,6 +171,70 @@ app.post('/api/funding/webhook', async (req, res) => {
   const event = req.body;
   console.log('Webhook received:', event);
   res.status(200).send('OK');
+});
+
+// --- Mailjet Email Route ---
+app.post('/api/email/welcome', async (req, res) => {
+  try {
+    const { email, name } = req.body;
+    
+    if (!process.env.MAILJET_API_KEY) {
+      return res.status(200).json({ message: 'Mailjet not configured, skipping email' });
+    }
+
+    const result = await mailjet
+      .post("send", { version: 'v3.1' })
+      .request({
+        Messages: [
+          {
+            From: {
+              Email: "noreply@oplug.com",
+              Name: "OPLUG VTU"
+            },
+            To: [
+              {
+                Email: email,
+                Name: name
+              }
+            ],
+            Subject: "Welcome to OPLUG VTU - Your Gateway to Seamless VTU Services!",
+            TextPart: `Hi ${name}, welcome to OPLUG VTU!`,
+            HTMLPart: `
+              <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+                <div style="background-color: #1d4ed8; padding: 40px 20px; text-align: center;">
+                  <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -0.02em;">OPLUG VTU</h1>
+                </div>
+                <div style="padding: 40px 30px; background-color: white;">
+                  <h2 style="color: #111827; margin-top: 0; font-size: 22px;">Welcome aboard, ${name}! 🚀</h2>
+                  <p style="color: #4b5563; line-height: 1.6; font-size: 16px;">
+                    We're thrilled to have you join the OPLUG family. You've just taken the first step towards the fastest and most reliable VTU experience in Nigeria.
+                  </p>
+                  <div style="background-color: #f9fafb; border-radius: 8px; padding: 20px; margin: 30px 0;">
+                    <h3 style="color: #111827; margin-top: 0; font-size: 16px;">What's Next?</h3>
+                    <ul style="color: #4b5563; padding-left: 20px; margin-bottom: 0;">
+                      <li style="margin-bottom: 10px;"><b>Fund Your Wallet:</b> Use your dedicated virtual account to add funds instantly.</li>
+                      <li style="margin-bottom: 10px;"><b>Buy Data & Airtime:</b> Enjoy massive discounts on all networks.</li>
+                      <li style="margin-bottom: 10px;"><b>Refer & Earn:</b> Share your link and get paid for every friend who joins.</li>
+                    </ul>
+                  </div>
+                  <a href="${process.env.APP_URL || 'https://oplug.vercel.app'}/dashboard" style="display: inline-block; background-color: #1d4ed8; color: white; padding: 16px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; margin-top: 10px;">Go to Dashboard</a>
+                </div>
+                <div style="padding: 20px 30px; background-color: #f3f4f6; text-align: center; border-top: 1px solid #e5e7eb;">
+                  <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                    © ${new Date().getFullYear()} OPLUG Tech. All rights reserved.<br>
+                    If you didn't create an account, please ignore this email.
+                  </p>
+                </div>
+              </div>
+            `
+          }
+        ]
+      });
+    res.json(result.body);
+  } catch (error: any) {
+    console.error('Mailjet Error:', error);
+    res.status(500).json({ message: 'Email sending failed' });
+  }
 });
 
 export default app;

@@ -9,7 +9,7 @@ import {
 import { vtuService } from '../services/apiService';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/firebase';
-import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, collection, addDoc, serverTimestamp, increment } from 'firebase/firestore';
 import { cn } from '../lib/utils';
 import PinModal from '../components/PinModal';
 import ProcessingModal from '../components/ProcessingModal';
@@ -28,12 +28,27 @@ export default function BuyData() {
   const [saveBeneficiary, setSaveBeneficiary] = useState(false);
   const [beneficiaryName, setBeneficiaryName] = useState('');
   const [showBeneficiaries, setShowBeneficiaries] = useState(false);
+  const [prices, setPrices] = useState<any>(null);
   
   const [showPinModal, setShowPinModal] = useState(false);
   const [showSetupPinModal, setShowSetupPinModal] = useState(false);
   const [showProcessing, setShowProcessing] = useState(false);
   const [processStatus, setProcessStatus] = useState<'processing' | 'success' | 'error'>('processing');
   const [processMessage, setProcessMessage] = useState('');
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const snap = await getDoc(doc(db, 'settings', 'prices'));
+        if (snap.exists()) {
+          setPrices(snap.data());
+        }
+      } catch (err) {
+        console.error('Error fetching prices:', err);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -49,6 +64,18 @@ export default function BuyData() {
     fetchServices();
   }, []);
 
+  const calculatePrice = (base: number) => {
+    if (!prices?.data) return base;
+    const { markup, resellerDiscount } = prices.data;
+    const isReseller = profile?.role?.toLowerCase() === 'reseller';
+    
+    let price = base * (1 + markup / 100);
+    if (isReseller) {
+      price = price * (1 - resellerDiscount / 100);
+    }
+    return Math.ceil(price);
+  };
+
   useEffect(() => {
     if (network) {
       const plans = services.filter(p => p.network.toLowerCase() === network.toLowerCase());
@@ -61,15 +88,28 @@ export default function BuyData() {
       if (type) {
         finalPlans = plans.filter(p => p.dataType === type);
       }
-      setFilteredPlans(finalPlans);
+
+      // Apply dynamic pricing
+      const pricedPlans = finalPlans.map(p => ({
+        ...p,
+        displayAmount: calculatePrice(Number(p.amount))
+      }));
+
+      setFilteredPlans(pricedPlans);
     } else {
       setFilteredPlans([]);
     }
-  }, [network, type, services]);
+  }, [network, type, services, prices, profile?.role]);
 
   const handlePurchase = async () => {
     if (!selectedPlan || !phone) {
       setMessage({ type: 'error', text: 'Please fill all fields' });
+      return;
+    }
+
+    const plan = filteredPlans.find(p => p.serviceID === selectedPlan);
+    if (plan && (profile?.balance || 0) < plan.displayAmount) {
+      setMessage({ type: 'error', text: 'Insufficient balance' });
       return;
     }
 
@@ -88,6 +128,7 @@ export default function BuyData() {
     setProcessStatus('processing');
 
     try {
+      const plan = filteredPlans.find(p => p.serviceID === selectedPlan);
       const response = await vtuService.buyData({
         serviceID: selectedPlan,
         mobileNumber: phone
@@ -99,19 +140,20 @@ export default function BuyData() {
         
         // Record transaction
         if (user) {
-          const plan = services.find(p => p.serviceID === selectedPlan);
           await addDoc(collection(db, 'transactions'), {
             userId: user.uid,
             type: 'Data Purchase',
-            amount: plan?.amount || 0,
+            amount: plan?.displayAmount || 0,
             status: 'success',
             description: `${network.toUpperCase()} ${plan?.dataPlan} to ${phone}`,
             reference: response.reference || `DATA-${Date.now()}`,
             createdAt: serverTimestamp()
           });
 
-          // Update user balance (in a real app, the backend would do this via webhook or direct write)
-          // For this demo, we'll assume the balance is updated on the server and we just need to refresh or wait
+          // Deduct from local balance
+          await updateDoc(doc(db, 'users', user.uid), {
+            balance: increment(-(plan?.displayAmount || 0))
+          });
         }
 
         if (saveBeneficiary && beneficiaryName && user) {
@@ -255,7 +297,7 @@ export default function BuyData() {
                 >
                   <option value="">Select Plan</option>
                   {filteredPlans.map(p => (
-                    <option key={p.serviceID} value={p.serviceID}>{p.dataPlan} - ₦{p.amount} ({p.validity})</option>
+                    <option key={p.serviceID} value={p.serviceID}>{p.dataPlan} - ₦{p.displayAmount} ({p.validity})</option>
                   ))}
                 </select>
               </div>
