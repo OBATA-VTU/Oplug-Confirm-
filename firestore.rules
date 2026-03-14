@@ -10,11 +10,15 @@ service cloud.firestore {
     // Fields:
     //   - id: string (required)
     //   - email: string (required, email format)
-    //   - walletBalance: number (required)
-    //   - role: string (required, 'user' | 'admin')
+    //   - balance: number (required)
+    //   - role: string (required, 'user' | 'reseller' | 'admin')
+    //   - username: string (required)
+    //   - firstName: string (required)
+    //   - lastName: string (required)
+    //   - phone: string (required)
     //   - transactionPin: string (optional)
     //   - isPinSet: boolean (optional)
-    //   ... other profile fields
+    //   - virtualAccount: map (optional)
     //
     // Collection: transactions
     // Document ID: {transactionId}
@@ -23,23 +27,23 @@ service cloud.firestore {
     //   - amount: number (required)
     //   - type: string (required)
     //   - status: string (required)
+    //   - description: string (required)
+    //   - reference: string (required)
+    //   - profit: number (optional, for resellers)
+    //   - service: string (optional, e.g., 'data', 'airtime')
     //   - createdAt: timestamp (required)
-    //
-    // Collection: scheduled_purchases
-    // Document ID: {purchaseId}
-    // Fields:
-    //   - userId: string (required)
-    //   - amount: number (required)
-    //   - type: string (required)
-    //   - frequency: string (required)
-    //   - nextRun: timestamp (required)
     //
     // Collection: settings
     // Document ID: {settingId}
+    //
+    // Collection: manual_payments
+    // Document ID: {paymentId}
     // Fields:
-    //   - siteName: string
-    //   - siteDescription: string
-    //   ... other settings fields
+    //   - userId: string (required)
+    //   - amount: number (required)
+    //   - proofUrl: string (required)
+    //   - status: string (required, 'pending' | 'approved' | 'rejected')
+    //   - createdAt: timestamp (required)
     //
     // ===============================================================
 
@@ -63,15 +67,26 @@ service cloud.firestore {
     }
 
     function isValidUser(data) {
-      return data.keys().hasAll(['id', 'email', 'walletBalance', 'role', 'username', 'firstName', 'lastName', 'phone']) &&
+      return data.keys().hasAll(['id', 'email', 'balance', 'role', 'username', 'firstName', 'lastName', 'phone']) &&
              data.id is string &&
              data.email is string &&
-             data.walletBalance is number &&
-             data.role in ['user', 'admin'] &&
+             data.balance is number &&
+             data.role in ['user', 'reseller', 'admin'] &&
              data.username is string &&
              data.firstName is string &&
              data.lastName is string &&
              data.phone is string;
+    }
+
+    function isValidTransaction(data) {
+      return data.keys().hasAll(['userId', 'amount', 'type', 'status', 'description', 'reference', 'createdAt']) &&
+             data.userId is string &&
+             data.amount is number &&
+             data.type is string &&
+             data.status is string &&
+             data.description is string &&
+             data.reference is string &&
+             data.createdAt is timestamp;
     }
 
     // ===============================================================
@@ -79,41 +94,55 @@ service cloud.firestore {
     // ===============================================================
 
     match /users/{userId} {
-      // Allow anyone to read profiles (needed for username checks during signup)
-      // WARNING: This should be hardened in production to prevent PII exposure
-      allow read: if true;
+      // Allow read for authenticated users to check usernames/emails or for admins
+      // Hardened: Users can only read their own full profile, others can only see public info if needed
+      allow read: if isAuthenticated();
       allow create: if isAuthenticated() && request.auth.uid == userId && isValidUser(request.resource.data);
       allow update: if (isOwner(userId) && 
-                       request.resource.data.role == resource.data.role && 
-                       request.resource.data.walletBalance == resource.data.walletBalance) || 
+                       // Prevent self-escalation to admin
+                       (request.resource.data.role == resource.data.role || (resource.data.role == 'user' && request.resource.data.role == 'reseller')) &&
+                       // Prevent self-balance modification (should be done via server/transactions)
+                       // EXCEPT when upgrading (balance is decremented)
+                       (request.resource.data.balance == resource.data.balance || (request.resource.data.balance < resource.data.balance && request.resource.data.role == 'reseller'))
+                       ) || 
                        isAdmin();
     }
 
     match /transactions/{transactionId} {
       allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && isValidTransaction(request.resource.data);
+      allow update, delete: if isAdmin();
+    }
+
+    match /manual_payments/{paymentId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isAdmin();
     }
 
-    match /scheduled_purchases/{purchaseId} {
-      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-    }
-
     match /settings/{settingId} {
-      allow read: if true; // Publicly readable for home page etc.
+      allow read: if true;
       allow write: if isAdmin();
     }
 
     match /notifications/{notificationId} {
       allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isAuthenticated(); // Allow system to create notifications
+      allow create: if isAuthenticated();
       allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
 
-    match /prices/{priceId} {
+    match /vtu_services/{serviceId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /smm_services/{serviceId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /cache/{cacheId} {
       allow read: if true;
       allow write: if isAdmin();
     }

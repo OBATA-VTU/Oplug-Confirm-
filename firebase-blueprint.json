@@ -23,6 +23,7 @@
         "transactionPin": { "type": "string" },
         "isProfileComplete": { "type": "boolean" },
         "isAdmin": { "type": "boolean" },
+        "photoURL": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" },
         "virtualAccount": {
           "type": "object",
@@ -130,6 +131,19 @@
         "resellerDiscount": { "type": "number" },
         "profitMargin": { "type": "number" }
       }
+    },
+    "ManualPayment": {
+      "title": "Manual Payment",
+      "description": "User requests for manual wallet funding.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "amount": { "type": "number" },
+        "proofUrl": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "amount", "proofUrl", "status", "createdAt"]
     }
   },
   "firestore": {
@@ -156,6 +170,10 @@
     "/prices/{priceId}": {
       "schema": "PriceSetting",
       "description": "Service pricing."
+    },
+    "/manual_payments/{paymentId}": {
+      "schema": "ManualPayment",
+      "description": "Manual payment requests."
     }
   }
 }

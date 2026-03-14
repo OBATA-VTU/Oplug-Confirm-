@@ -118,15 +118,23 @@ export default function BuyAirtime() {
         
         // Record transaction
         if (user) {
+          const isReseller = profile?.role?.toLowerCase() === 'reseller';
+          const baseAmount = Number(amount);
+          const markup = prices?.airtime?.markup || 0;
+          const standardPrice = Math.ceil(baseAmount * (1 + markup / 100));
+          const profit = isReseller ? (standardPrice - finalAmount) : 0;
+
           const network = services.find(s => s.serviceID === selectedService)?.network || selectedService;
           await addDoc(collection(db, 'transactions'), {
             userId: user.uid,
             type: 'Airtime Purchase',
             amount: finalAmount,
+            profit: profit,
             status: 'success',
             description: `${network.toUpperCase()} ₦${amount} Airtime to ${phone}`,
             reference: response.reference || `AIRTIME-${Date.now()}`,
-            createdAt: serverTimestamp()
+            createdAt: serverTimestamp(),
+            service: 'airtime'
           });
 
           // Deduct from local balance
@@ -228,8 +236,8 @@ export default function BuyAirtime() {
                     className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-12 pr-10 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none cursor-pointer"
                   >
                     <option value="">Choose a network provider</option>
-                    {services.map((s) => (
-                      <option key={s.serviceID} value={s.serviceID}>
+                    {services.map((s, index) => (
+                      <option key={`${s.serviceID}-${index}`} value={s.serviceID}>
                         {s.network.toUpperCase()}
                       </option>
                     ))}

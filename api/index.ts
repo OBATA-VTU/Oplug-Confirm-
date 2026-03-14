@@ -151,11 +151,12 @@ app.post('/api/funding/generate-account', async (req, res) => {
 // --- Paystack API Proxy ---
 app.post('/api/funding/paystack-initialize', async (req, res) => {
   try {
-    const { email, amount, reference } = req.body;
+    const { email, amount, reference, metadata } = req.body;
     const response = await axios.post('https://api.paystack.co/transaction/initialize', {
       email,
-      amount: amount * 100, // Paystack expects kobo
+      amount: Math.round(amount * 100), // Paystack expects kobo
       reference,
+      metadata,
       callback_url: `${process.env.APP_URL || 'https://oplug.vercel.app'}/dashboard`
     }, {
       headers: { 'Authorization': `Bearer ${process.env.PAYSTACK_SECRET_KEY}` }
@@ -166,10 +167,59 @@ app.post('/api/funding/paystack-initialize', async (req, res) => {
   }
 });
 
+app.post('/api/funding/paystack-dynamic-account', async (req, res) => {
+  try {
+    const { email, amount, reference } = req.body;
+    // Using Paystack Charge API for bank transfer to get account details directly
+    const response = await axios.post('https://api.paystack.co/charge', {
+      email,
+      amount: amount * 100,
+      reference,
+      bank_transfer: {} // This triggers bank transfer details generation
+    }, {
+      headers: { 'Authorization': `Bearer ${process.env.PAYSTACK_SECRET_KEY}` }
+    });
+    res.json(response.data);
+  } catch (error: any) {
+    console.error('Paystack Dynamic Account Error:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json(error.response?.data || { message: 'Paystack API Error' });
+  }
+});
+
 // --- Webhook for Funding ---
 app.post('/api/funding/webhook', async (req, res) => {
   const event = req.body;
   console.log('Webhook received:', event);
+
+  if (event.event === 'charge.success') {
+    const { reference, metadata, customer, amount } = event.data;
+    
+    // Handle Quick Purchase
+    if (metadata && metadata.type === 'quick_purchase') {
+      const { vtuType, network, phone, planId } = metadata;
+      try {
+        const endpoint = vtuType === 'data' ? '/data' : '/airtime';
+        const payload = vtuType === 'data' 
+          ? { serviceID: planId, mobileNumber: phone }
+          : { serviceID: planId, mobileNumber: phone, amount: metadata.amount };
+
+        await axios.post(`${INLOMAX_BASE_URL}${endpoint}`, payload, {
+          headers: { 'Authorization': `Token ${process.env.INLOMAX_API_KEY}` }
+        });
+        console.log(`Quick ${vtuType} purchase successful for ${phone}`);
+      } catch (err: any) {
+        console.error('Quick Purchase Fulfillment Error:', err.response?.data || err.message);
+        // In a real app, you'd queue this for retry or notify admin
+      }
+    }
+    
+    // Handle Wallet Funding (Normal)
+    // This is usually handled by the frontend checking status or a separate backend logic
+    // that updates the user's balance in Firestore.
+    // Since we don't have direct Firestore write access from here (unless we use Admin SDK),
+    // we'll assume the frontend handles the balance update or we'd need to add Admin SDK.
+  }
+
   res.status(200).send('OK');
 });
 

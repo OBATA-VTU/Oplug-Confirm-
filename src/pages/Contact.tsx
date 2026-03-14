@@ -1,8 +1,26 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Mail, Phone, MapPin, MessageSquare, Ticket, Send } from 'lucide-react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 export default function Contact() {
+  const [content, setContent] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchContent = async () => {
+      try {
+        const docSnap = await getDoc(doc(db, 'pages', 'contact'));
+        if (docSnap.exists()) {
+          setContent(docSnap.data());
+        }
+      } catch (err) {
+        console.error('Error fetching contact page content:', err);
+      }
+    };
+    fetchContent();
+  }, []);
+
   return (
     <div className="min-h-screen bg-white pt-20 pb-32">
       <div className="container mx-auto px-6 max-w-6xl">
@@ -12,9 +30,9 @@ export default function Contact() {
           className="space-y-20"
         >
           <div className="text-center max-w-3xl mx-auto">
-            <h1 className="text-5xl lg:text-7xl font-black mb-8">Get in Touch</h1>
+            <h1 className="text-5xl lg:text-7xl font-black mb-8">{content?.title || 'Get in Touch'}</h1>
             <p className="text-xl text-gray-500 leading-relaxed">
-              Have a question or need assistance? Our team is here to help you 24/7.
+              {content?.subtitle || 'Have a question or need assistance? Our team is here to help you 24/7.'}
             </p>
           </div>
 
@@ -22,7 +40,7 @@ export default function Contact() {
             <div className="space-y-12">
               <div className="relative">
                 <img 
-                  src="https://illustrations.popsy.co/blue/customer-support.svg" 
+                  src={content?.heroImage || "https://illustrations.popsy.co/blue/customer-support.svg"} 
                   alt="Contact Us" 
                   className="w-full max-w-md mx-auto"
                   referrerPolicy="no-referrer"
@@ -35,14 +53,14 @@ export default function Contact() {
                     <Mail className="w-6 h-6 text-blue-700" />
                   </div>
                   <h3 className="font-bold">Email Us</h3>
-                  <p className="text-sm text-gray-500">support@oplug.com</p>
+                  <p className="text-sm text-gray-500">{content?.email || 'support@oplug.com'}</p>
                 </div>
                 <div className="p-8 bg-gray-50 rounded-3xl border border-gray-100 space-y-4">
                   <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center">
                     <MessageSquare className="w-6 h-6 text-emerald-700" />
                   </div>
                   <h3 className="font-bold">WhatsApp</h3>
-                  <p className="text-sm text-gray-500">+234 814 245 2729</p>
+                  <p className="text-sm text-gray-500">{content?.whatsapp || '+234 814 245 2729'}</p>
                 </div>
               </div>
             </div>

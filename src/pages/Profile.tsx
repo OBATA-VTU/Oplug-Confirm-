@@ -1,25 +1,70 @@
-import React from 'react';
-import { motion } from 'motion/react';
+import React, { useState, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   User, Mail, Phone, MapPin, Shield, 
   Camera, Check, AlertCircle, Landmark, 
   Lock, Bell, Smartphone, Globe, ChevronRight,
   Code, Download, LogOut, ShieldCheck, CreditCard,
-  Copy
+  Copy, Loader2, UploadCloud
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import PinModal from '../components/PinModal';
+import axios from 'axios';
+import { db } from '../lib/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 
 export default function Profile() {
-  const { profile, logout, setTransactionPin } = useAuth();
+  const { profile, logout, setTransactionPin, refreshProfile, user } = useAuth();
   const navigate = useNavigate();
-  const [showPinSetup, setShowPinSetup] = React.useState(false);
+  const [showPinSetup, setShowPinSetup] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0] || !user) return;
+
+    const file = e.target.files[0];
+    setUploading(true);
+    setUploadError('');
+
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const apiKey = import.meta.env.VITE_IMGBB_API_KEY;
+      if (!apiKey) {
+        throw new Error('ImgBB API Key is missing. Please set VITE_IMGBB_API_KEY in your environment.');
+      }
+
+      console.log('Uploading profile picture to ImgBB...');
+      const uploadRes = await axios.post(`https://api.imgbb.com/1/upload?key=${apiKey}`, formData);
+      
+      if (!uploadRes.data || !uploadRes.data.data || !uploadRes.data.data.url) {
+        throw new Error('Invalid response from ImgBB');
+      }
+
+      const photoURL = uploadRes.data.data.url;
+      console.log('Upload successful:', photoURL);
+
+      await updateDoc(doc(db, 'users', user.uid), {
+        photoURL: photoURL
+      });
+
+      await refreshProfile();
+    } catch (err: any) {
+      console.error('Upload error:', err);
+      setUploadError(err.message || 'Failed to upload image. Please try again.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const settingsGroups = [
@@ -83,12 +128,33 @@ export default function Profile() {
       <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100 relative overflow-hidden">
         <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
           <div className="relative group">
-            <div className="w-32 h-32 bg-blue-600 rounded-[2.5rem] flex items-center justify-center text-4xl font-black text-white shadow-xl shadow-blue-100 transform group-hover:scale-105 transition-transform">
-              {profile?.fullName?.charAt(0) || profile?.username?.charAt(0)}
+            <div className="w-32 h-32 bg-blue-600 rounded-[2.5rem] flex items-center justify-center text-4xl font-black text-white shadow-xl shadow-blue-100 transform group-hover:scale-105 transition-all overflow-hidden">
+              {profile?.photoURL ? (
+                <img src={profile.photoURL} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              ) : (
+                profile?.fullName?.charAt(0) || profile?.username?.charAt(0)
+              )}
+              
+              {uploading && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                  <Loader2 className="w-8 h-8 text-white animate-spin" />
+                </div>
+              )}
             </div>
-            <button className="absolute -bottom-2 -right-2 w-10 h-10 bg-white rounded-2xl shadow-lg border border-gray-100 flex items-center justify-center text-gray-400 hover:text-blue-700 transition-colors">
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="absolute -bottom-2 -right-2 w-10 h-10 bg-white rounded-2xl shadow-lg border border-gray-100 flex items-center justify-center text-gray-400 hover:text-blue-700 transition-colors disabled:opacity-50"
+            >
               <Camera className="w-5 h-5" />
             </button>
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              className="hidden" 
+              accept="image/*" 
+              onChange={handleImageUpload} 
+            />
           </div>
           
           <div className="text-center md:text-left flex-1">
@@ -105,6 +171,9 @@ export default function Profile() {
                 Verified Account
               </span>
             </div>
+            {uploadError && (
+              <p className="text-red-500 text-[10px] font-bold mt-2">{uploadError}</p>
+            )}
           </div>
 
           <div className="flex flex-col items-center md:items-end gap-2">

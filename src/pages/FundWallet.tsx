@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Wallet, CreditCard, Landmark, Copy, CheckCircle2, Upload, ArrowRight, Info, Zap, ChevronRight, ShieldCheck, Banknote } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { Wallet, CreditCard, Landmark, Copy, CheckCircle2, Upload, ArrowRight, Info, Zap, ChevronRight, ShieldCheck, Banknote, RefreshCw, Clock, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import { fundingService } from '../services/apiService';
@@ -10,12 +11,29 @@ import axios from 'axios';
 
 export default function FundWallet() {
   const { profile, user } = useAuth();
-  const [method, setMethod] = useState<'virtual' | 'paystack' | 'manual'>('virtual');
+  const location = useLocation();
+  const [method, setMethod] = useState<'virtual' | 'paystack' | 'manual' | 'dynamic'>('virtual');
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isFirstDeposit, setIsFirstDeposit] = useState(false);
+  
+  // Dynamic Account State
+  const [dynamicAccount, setDynamicAccount] = useState<{
+    account_number: string;
+    bank_name: string;
+    account_name: string;
+    expires_at: string;
+    reference: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (location.state?.amount) {
+      setAmount(location.state.amount.toString());
+      setMethod('paystack'); // Default to paystack if coming from upgrade
+    }
+  }, [location.state]);
   
   // Manual Payment State
   const [proof, setProof] = useState<File | null>(null);
@@ -68,11 +86,18 @@ export default function FundWallet() {
       
       const apiKey = import.meta.env.VITE_IMGBB_API_KEY;
       if (!apiKey) {
-        throw new Error('ImgBB API Key is missing');
+        throw new Error('ImgBB API Key is missing. Please set VITE_IMGBB_API_KEY in your environment.');
       }
 
+      console.log('Uploading to ImgBB...');
       const uploadRes = await axios.post(`https://api.imgbb.com/1/upload?key=${apiKey}`, formData);
+      
+      if (!uploadRes.data || !uploadRes.data.data || !uploadRes.data.data.url) {
+        throw new Error('Invalid response from ImgBB');
+      }
+
       const downloadURL = uploadRes.data.data.url;
+      console.log('Upload successful:', downloadURL);
 
       await addDoc(collection(db, 'manual_payments'), {
         userId: user?.uid,
@@ -87,8 +112,9 @@ export default function FundWallet() {
       setProof(null);
       setProofPreview(null);
       setManualAmount('');
-    } catch (err) {
-      setError('Failed to submit proof. Please try again.');
+    } catch (err: any) {
+      console.error('Manual funding error:', err);
+      setError(err.message || 'Failed to submit proof. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -121,8 +147,54 @@ export default function FundWallet() {
     }
   };
 
+  const handleDynamicAccount = async () => {
+    if (!amount || Number(amount) < 100) {
+      setError('Minimum funding amount is ₦100');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    try {
+      const reference = `FUND_DYN_${user?.uid}_${Date.now()}`;
+      const res = await fundingService.initializeDynamicAccount({
+        email: profile?.email || '',
+        amount: Number(amount),
+        reference
+      });
+
+      if (res.status && res.data.status === 'send_address') {
+        const transferData = res.data.data;
+        setDynamicAccount({
+          account_number: transferData.account_number,
+          bank_name: transferData.bank_name,
+          account_name: 'Paystack / Oplug', // Usually Paystack generates a generic name or includes merchant
+          expires_at: new Date(Date.now() + 30 * 60000).toISOString(), // Paystack usually gives 30 mins
+          reference
+        });
+      } else {
+        setError(res.message || 'Failed to generate dynamic account. Please try another method.');
+      }
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const checkPaymentStatus = async () => {
+    setLoading(true);
+    // In a real app, you'd call an endpoint to verify the reference
+    // For now, we'll just show a message
+    setTimeout(() => {
+      setSuccess('We are verifying your payment. Your wallet will be credited once confirmed.');
+      setLoading(false);
+    }, 2000);
+  };
+
   const methods = [
     { id: 'virtual', label: 'Virtual Account', icon: Landmark, description: 'Automated & Instant', color: 'bg-blue-50 text-blue-700' },
+    { id: 'dynamic', label: 'Dynamic Account', icon: RefreshCw, description: 'One-time Transfer', color: 'bg-emerald-50 text-emerald-700' },
     { id: 'paystack', label: 'ATM Card', icon: CreditCard, description: 'Pay via Paystack', color: 'bg-purple-50 text-purple-700' },
     { id: 'manual', label: 'Manual Funding', icon: Banknote, description: 'Zero Fees', color: 'bg-amber-50 text-amber-700' },
   ];
@@ -132,7 +204,9 @@ export default function FundWallet() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-gray-900">Fund Wallet</h1>
-          <p className="text-gray-500 font-medium">Choose your preferred funding method.</p>
+          <p className="text-gray-500 font-medium">
+            {location.state?.reason ? `Funding for ${location.state.reason}` : 'Choose your preferred funding method.'}
+          </p>
         </div>
         {isFirstDeposit && (
           <div className="bg-emerald-50 text-emerald-700 px-6 py-3 rounded-2xl text-xs font-black flex items-center gap-2 border border-emerald-100 shadow-sm">
@@ -184,6 +258,10 @@ export default function FundWallet() {
               </div>
               <div className="flex justify-between text-[10px] font-bold text-blue-700">
                 <span>ATM Card</span>
+                <span>₦25 Flat</span>
+              </div>
+              <div className="flex justify-between text-[10px] font-bold text-blue-700">
+                <span>Dynamic Account</span>
                 <span>₦25 Flat</span>
               </div>
               <div className="flex justify-between text-[10px] font-bold text-blue-700">
@@ -287,6 +365,143 @@ export default function FundWallet() {
                         <p className="text-lg font-black text-gray-900">Account Not Generated</p>
                         <p className="text-sm text-gray-500 max-w-xs mx-auto">Please ensure your profile is complete to get your automated funding accounts.</p>
                       </div>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
+              {method === 'dynamic' && (
+                <motion.div 
+                  key="dynamic"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="space-y-8"
+                >
+                  {!dynamicAccount ? (
+                    <div className="max-w-md mx-auto space-y-8">
+                      <div className="text-center space-y-2 mb-10">
+                        <h3 className="text-2xl font-black text-gray-900">Dynamic Account</h3>
+                        <p className="text-sm text-gray-500 font-medium">Get a one-time account number for this payment.</p>
+                      </div>
+
+                      <div className="space-y-6">
+                        <div className="space-y-2">
+                          <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-2">Amount to Fund (₦)</label>
+                          <div className="relative">
+                            <Banknote className="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-400" />
+                            <input 
+                              type="number"
+                              placeholder="Min: 100"
+                              value={amount}
+                              onChange={(e) => setAmount(e.target.value)}
+                              className="w-full bg-gray-50 border border-gray-100 rounded-[2rem] pl-14 pr-6 py-6 text-2xl font-black focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="p-6 bg-emerald-50 rounded-3xl border border-emerald-100 flex items-center gap-4">
+                          <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <RefreshCw className="w-6 h-6 text-white" />
+                          </div>
+                          <p className="text-xs text-emerald-900 font-bold">
+                            A one-time account will be generated. Do not save it for future use.
+                          </p>
+                        </div>
+
+                        <button 
+                          onClick={handleDynamicAccount}
+                          disabled={loading}
+                          className="w-full bg-emerald-600 text-white font-black py-6 rounded-[2rem] shadow-2xl shadow-emerald-200 hover:scale-[1.02] transition-all active:scale-[0.98] flex items-center justify-center gap-3 disabled:opacity-50"
+                        >
+                          {loading ? (
+                            <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          ) : (
+                            <>
+                              Generate Account
+                              <ArrowRight className="w-6 h-6" />
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-8">
+                      <div className="text-center space-y-2">
+                        <h3 className="text-2xl font-black text-gray-900">Transfer Details</h3>
+                        <p className="text-sm text-gray-500 font-medium">Please make a transfer of <span className="text-blue-600 font-black">₦{amount}</span> to the account below.</p>
+                      </div>
+
+                      <div className="bg-gradient-to-br from-emerald-900 to-emerald-800 text-white rounded-[2.5rem] p-10 relative overflow-hidden shadow-2xl">
+                        <div className="relative z-10 space-y-8">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="text-[10px] opacity-50 uppercase tracking-[0.2em] mb-1 font-black">Bank Name</p>
+                              <p className="text-2xl font-black tracking-tight">{dynamicAccount.bank_name}</p>
+                            </div>
+                            <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full border border-white/10">
+                              <Clock className="w-4 h-4 text-emerald-300" />
+                              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-300">Expires in 30m</span>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <p className="text-[10px] opacity-50 uppercase tracking-[0.2em] mb-2 font-black">Account Number</p>
+                            <div className="flex items-center gap-4">
+                              <p className="text-4xl font-black tracking-[0.1em]">{dynamicAccount.account_number}</p>
+                              <button 
+                                onClick={() => handleCopy(dynamicAccount.account_number)}
+                                className="p-3 bg-white/10 rounded-xl hover:bg-white/20 transition-all active:scale-90"
+                              >
+                                <Copy className="w-5 h-5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="flex justify-between items-end">
+                            <div>
+                              <p className="text-[10px] opacity-50 uppercase tracking-[0.2em] mb-1 font-black">Account Name</p>
+                              <p className="text-lg font-black uppercase tracking-tight">{dynamicAccount.account_name}</p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="absolute -top-20 -right-20 w-64 h-64 bg-emerald-400/20 rounded-full blur-3xl" />
+                      </div>
+
+                      <div className="bg-red-50 rounded-3xl p-6 border border-red-100 flex items-start gap-4">
+                        <div className="w-10 h-10 bg-red-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                          <AlertTriangle className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs text-red-900 font-black uppercase tracking-wider">Warning: Single Use Only</p>
+                          <p className="text-[10px] text-red-700 font-bold leading-relaxed">
+                            This account number is for a one-time transfer only. Do not save it for future payments. Oplug is not liable for losses incurred from saving this account.
+                          </p>
+                        </div>
+                      </div>
+
+                      <button 
+                        onClick={checkPaymentStatus}
+                        disabled={loading}
+                        className="w-full bg-gray-900 text-white font-black py-6 rounded-[2rem] shadow-2xl hover:scale-[1.02] transition-all active:scale-[0.98] flex items-center justify-center gap-3 disabled:opacity-50"
+                      >
+                        {loading ? (
+                          <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        ) : (
+                          <>
+                            I have made payment
+                            <CheckCircle2 className="w-6 h-6" />
+                          </>
+                        )}
+                      </button>
+
+                      <button 
+                        onClick={() => setDynamicAccount(null)}
+                        className="w-full text-gray-400 text-xs font-black uppercase tracking-widest hover:text-gray-600 transition-colors"
+                      >
+                        Cancel & Try Another Method
+                      </button>
                     </div>
                   )}
                 </motion.div>

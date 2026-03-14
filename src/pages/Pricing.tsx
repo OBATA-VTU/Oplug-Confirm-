@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Search, Filter, Smartphone, Wifi, Tv, Zap, GraduationCap, ShoppingCart, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, getDocs, collection } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { cn } from '../lib/utils';
 
@@ -20,37 +20,57 @@ export default function Pricing() {
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [prices, setPrices] = useState<any>(null);
+  const [services, setServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchPrices = async () => {
+    const fetchData = async () => {
       try {
+        // Fetch Prices Config
         const snap = await getDoc(doc(db, 'settings', 'prices'));
         if (snap.exists()) {
           setPrices(snap.data());
         }
+
+        // Fetch Manual Services
+        const servicesSnap = await getDoc(doc(db, 'settings', 'services'));
+        let allServices = servicesSnap.exists() ? (servicesSnap.data().list || []) : [];
+
+        // Fetch Synced VTU Services
+        const vtuSnap = await getDocs(collection(db, 'vtu_services'));
+        const vtuServices = vtuSnap.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: data.serviceID || data.id,
+            name: data.name,
+            category: data.category || 'data',
+            basePrice: data.amount || data.price || 0,
+            duration: data.validity || '30 Days'
+          };
+        });
+
+        // Fetch Synced SMM Services
+        const smmSnap = await getDocs(collection(db, 'smm_services'));
+        const smmServices = smmSnap.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: data.service || data.id,
+            name: data.name,
+            category: 'smm',
+            basePrice: data.rate || 0,
+            duration: 'Instant'
+          };
+        });
+
+        setServices([...allServices, ...vtuServices, ...smmServices]);
       } catch (err) {
-        console.error('Error fetching prices:', err);
+        console.error('Error fetching pricing data:', err);
       } finally {
         setLoading(false);
       }
     };
-    fetchPrices();
+    fetchData();
   }, []);
-
-  // Mock data for display if Firestore is empty or for services not in settings
-  const defaultServices = [
-    { id: 'MTN_1GB', name: 'MTN 1GB (SME)', category: 'data', basePrice: 230, duration: '30 Days' },
-    { id: 'MTN_2GB', name: 'MTN 2GB (SME)', category: 'data', basePrice: 460, duration: '30 Days' },
-    { id: 'AIRTEL_1GB', name: 'Airtel 1GB (Gifting)', category: 'data', basePrice: 280, duration: '30 Days' },
-    { id: 'GLO_1GB', name: 'Glo 1GB (SME)', category: 'data', basePrice: 220, duration: '30 Days' },
-    { id: 'DSTV_COMPACT', name: 'DSTV Compact', category: 'cable', basePrice: 10500, duration: 'Monthly' },
-    { id: 'GOTV_JOLLI', name: 'GOTV Jolli', category: 'cable', basePrice: 3300, duration: 'Monthly' },
-    { id: 'WAEC_PIN', name: 'WAEC Result Checker', category: 'education', basePrice: 3500, duration: 'Instant' },
-    { id: 'NECO_PIN', name: 'NECO Result Checker', category: 'education', basePrice: 1200, duration: 'Instant' },
-    { id: 'IG_LIKES_1K', name: 'Instagram Likes (1K)', category: 'smm', basePrice: 400, duration: '1-2 Hours' },
-    { id: 'IG_FOLLOW_1K', name: 'Instagram Followers (1K)', category: 'smm', basePrice: 1000, duration: '24 Hours' },
-  ];
 
   const calculatePrice = (base: number, category: string, type: 'smart' | 'reseller') => {
     if (!prices) return base;
@@ -71,7 +91,7 @@ export default function Pricing() {
     return Math.ceil(price);
   };
 
-  const filteredServices = defaultServices.filter(service => {
+  const filteredServices = services.filter(service => {
     const matchesCategory = activeCategory === 'all' || service.category === activeCategory;
     const matchesSearch = service.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                          service.id.toLowerCase().includes(searchQuery.toLowerCase());

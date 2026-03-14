@@ -28,7 +28,9 @@ import {
   Grid,
   CheckCircle2,
   Info,
-  AlertCircle
+  AlertCircle,
+  TrendingUp,
+  Star
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
@@ -39,6 +41,7 @@ import Logo from './Logo';
 
 const navItems = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+  { name: 'Quick Purchase', path: '/quick-purchase', icon: Zap },
   { name: 'All Services', path: '/services', icon: Grid },
   { name: 'Fund Wallet', path: '/fund', icon: Wallet },
   { name: 'Buy Airtime', path: '/airtime', icon: Phone },
@@ -47,7 +50,6 @@ const navItems = [
   { name: 'Electricity', path: '/electricity', icon: Zap },
   { name: 'Education Pin', path: '/education', icon: GraduationCap },
   { name: 'SMM Booster', path: '/smm', icon: ShoppingCart },
-  { name: 'Scheduled Purchases', path: '/scheduled-purchases', icon: Clock },
   { name: 'P2P Transfer', path: '/transfer', icon: Repeat },
   { name: 'History', path: '/history', icon: History },
 ];
@@ -126,16 +128,16 @@ export default function Layout() {
             </button>
           </div>
 
-          <nav className="flex-1 overflow-y-auto px-4 py-4 scrollbar-hide">
-            <div className="space-y-1.5">
-              <p className="px-4 text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mb-4">Main Menu</p>
+          <nav className="flex-1 overflow-y-auto px-4 py-2 scrollbar-hide">
+            <div className="space-y-1">
+              <p className="px-4 text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mb-2">Main Menu</p>
               {navItems.map((item) => (
                 <Link
                   key={item.path}
                   to={item.path}
                   onClick={() => setIsSidebarOpen(false)}
                   className={cn(
-                    "flex items-center gap-4 px-4 py-3.5 rounded-2xl text-sm font-semibold transition-all duration-200 group",
+                    "flex items-center gap-4 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 group",
                     location.pathname === item.path 
                       ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" 
                       : "text-white/60 hover:bg-white/5 hover:text-white"
@@ -149,8 +151,40 @@ export default function Layout() {
                 </Link>
               ))}
 
-              <div className="h-px bg-white/5 my-6 mx-4" />
-              <p className="px-4 text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mb-4">Account & Help</p>
+              {profile?.role === 'reseller' && (
+                <Link
+                  to="/reseller-dashboard"
+                  onClick={() => setIsSidebarOpen(false)}
+                  className={cn(
+                    "flex items-center gap-4 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 group mt-1",
+                    location.pathname === '/reseller-dashboard' 
+                      ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/20" 
+                      : "text-emerald-400/60 hover:bg-emerald-500/10 hover:text-emerald-400"
+                  )}
+                >
+                  <TrendingUp className="w-5 h-5" />
+                  Reseller Dashboard
+                </Link>
+              )}
+
+              {profile?.role !== 'reseller' && profile?.role !== 'admin' && (
+                <Link
+                  to="/upgrade"
+                  onClick={() => setIsSidebarOpen(false)}
+                  className={cn(
+                    "flex items-center gap-4 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 group mt-1",
+                    location.pathname === '/upgrade' 
+                      ? "bg-amber-600 text-white shadow-lg shadow-amber-600/20" 
+                      : "text-amber-400/60 hover:bg-amber-500/10 hover:text-amber-400"
+                  )}
+                >
+                  <Star className="w-5 h-5" />
+                  Upgrade Account
+                </Link>
+              )}
+
+              <div className="h-px bg-white/5 my-4 mx-4" />
+              <p className="px-4 text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mb-2">Account & Help</p>
               
               {secondaryItems.map((item) => (
                 <Link
@@ -158,7 +192,7 @@ export default function Layout() {
                   to={item.path}
                   onClick={() => setIsSidebarOpen(false)}
                   className={cn(
-                    "flex items-center gap-4 px-4 py-3.5 rounded-2xl text-sm font-semibold transition-all duration-200 group",
+                    "flex items-center gap-4 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 group",
                     location.pathname === item.path 
                       ? "bg-white/10 text-white shadow-lg" 
                       : "text-white/60 hover:bg-white/5 hover:text-white"
@@ -174,13 +208,13 @@ export default function Layout() {
               
               {profile?.role === 'admin' && (
                 <>
-                  <div className="h-px bg-white/5 my-6 mx-4" />
-                  <p className="px-4 text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mb-4">Administration</p>
+                  <div className="h-px bg-white/5 my-4 mx-4" />
+                  <p className="px-4 text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] mb-2">Administration</p>
                   <Link
                     to="/admin"
                     onClick={() => setIsSidebarOpen(false)}
                     className={cn(
-                      "flex items-center gap-4 px-4 py-3.5 rounded-2xl text-sm font-semibold transition-all duration-200 group",
+                      "flex items-center gap-4 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 group",
                       location.pathname.startsWith('/admin') 
                         ? "bg-red-600 text-white shadow-lg shadow-red-600/20" 
                         : "text-red-400/60 hover:bg-red-500/10 hover:text-red-400"

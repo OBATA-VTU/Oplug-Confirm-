@@ -70,34 +70,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Upgrade Banner */}
-      {!isReseller && profile?.role !== 'admin' && (
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-r from-indigo-600 to-blue-700 rounded-[2rem] p-6 text-white relative overflow-hidden shadow-xl shadow-blue-100"
-        >
-          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
-                <TrendingUp className="w-8 h-8 text-white" />
-              </div>
-              <div>
-                <h4 className="text-xl font-black">Become a Reseller</h4>
-                <p className="text-sm text-blue-100 font-medium">Get massive discounts on all services and boost your profit.</p>
-              </div>
-            </div>
-            <Link 
-              to="/upgrade" 
-              className="bg-white text-blue-700 px-8 py-4 rounded-2xl font-black text-sm shadow-lg hover:scale-105 transition-transform active:scale-95 whitespace-nowrap"
-            >
-              Upgrade Now
-            </Link>
-          </div>
-          <div className="absolute top-[-50%] right-[-10%] w-64 h-64 bg-white/10 rounded-full blur-3xl" />
-        </motion.div>
-      )}
-
       {/* Profile Completion Alert */}
       {isProfileIncomplete && (
         <motion.div 

@@ -14,7 +14,6 @@ import CableSubscription from './pages/CableSubscription';
 import ElectricityPayment from './pages/ElectricityPayment';
 import EducationPin from './pages/EducationPin';
 import SmmServices from './pages/SmmServices';
-import Upgrade from './pages/Upgrade';
 import FundWallet from './pages/FundWallet';
 import Support from './pages/Support';
 import ReferAndEarn from './pages/ReferAndEarn';
@@ -23,6 +22,8 @@ import History from './pages/History';
 import ScheduledPurchases from './pages/ScheduledPurchases';
 import DeveloperAPI from './pages/DeveloperAPI';
 import Profile from './pages/Profile';
+import Upgrade from './pages/Upgrade';
+import ResellerDashboard from './pages/ResellerDashboard';
 import PersonalInfo from './pages/profile/PersonalInfo';
 import PasswordSettings from './pages/profile/PasswordSettings';
 import ApiWebhookSettings from './pages/profile/ApiWebhookSettings';
@@ -50,6 +51,7 @@ import CryptoApi from './pages/docs/CryptoApi';
 import ServicesApi from './pages/docs/ServicesApi';
 import ApiSandbox from './pages/docs/ApiSandbox';
 import AllServices from './pages/AllServices';
+import QuickPurchase from './pages/QuickPurchase';
 import ProfileSetupModal from './components/ProfileSetupModal';
 import { useInactivityLogout } from './hooks/useInactivityLogout';
 
@@ -128,6 +130,7 @@ function AppRoutes() {
       <Route path="/blog" element={<Blog />} />
       <Route path="/blog/:id" element={<BlogPost />} />
       <Route path="/pricing" element={<Pricing />} />
+      <Route path="/quick-purchase" element={<QuickPurchase />} />
       
       <Route path="/developer/docs" element={<ApiDocsLayout />}>
         <Route index element={<ApiDocsOverview />} />
@@ -152,7 +155,6 @@ function AppRoutes() {
         <Route path="/electricity" element={<ElectricityPayment />} />
         <Route path="/education" element={<EducationPin />} />
         <Route path="/smm" element={<SmmServices />} />
-        <Route path="/upgrade" element={<Upgrade />} />
         <Route path="/transfer" element={<P2PTransfer />} />
         <Route path="/support" element={<Support />} />
         <Route path="/refer" element={<ReferAndEarn />} />
@@ -163,6 +165,8 @@ function AppRoutes() {
         <Route path="/developer" element={<DeveloperAPI />} />
         <Route path="/services" element={<AllServices />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/upgrade" element={<Upgrade />} />
+        <Route path="/reseller-dashboard" element={<ResellerDashboard />} />
         <Route path="/profile/personal-info" element={<PersonalInfo />} />
         <Route path="/profile/password" element={<PasswordSettings />} />
         <Route path="/profile/api-webhook" element={<ApiWebhookSettings />} />

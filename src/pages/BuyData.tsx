@@ -140,19 +140,28 @@ export default function BuyData() {
         
         // Record transaction
         if (user) {
+          const isReseller = profile?.role?.toLowerCase() === 'reseller';
+          const basePrice = Number(plan?.amount || 0);
+          const markup = prices?.data?.markup || 0;
+          const standardPrice = Math.ceil(basePrice * (1 + markup / 100));
+          const resellerPrice = plan?.displayAmount || 0;
+          const profit = isReseller ? (standardPrice - resellerPrice) : 0;
+
           await addDoc(collection(db, 'transactions'), {
             userId: user.uid,
             type: 'Data Purchase',
-            amount: plan?.displayAmount || 0,
+            amount: resellerPrice,
+            profit: profit,
             status: 'success',
             description: `${network.toUpperCase()} ${plan?.dataPlan} to ${phone}`,
             reference: response.reference || `DATA-${Date.now()}`,
-            createdAt: serverTimestamp()
+            createdAt: serverTimestamp(),
+            service: 'data'
           });
 
           // Deduct from local balance
           await updateDoc(doc(db, 'users', user.uid), {
-            balance: increment(-(plan?.displayAmount || 0))
+            balance: increment(-resellerPrice)
           });
         }
 
@@ -296,8 +305,8 @@ export default function BuyData() {
                   className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                 >
                   <option value="">Select Plan</option>
-                  {filteredPlans.map(p => (
-                    <option key={p.serviceID} value={p.serviceID}>{p.dataPlan} - ₦{p.displayAmount} ({p.validity})</option>
+                  {filteredPlans.map((p, index) => (
+                    <option key={`${p.serviceID}-${index}`} value={p.serviceID}>{p.dataPlan} - ₦{p.displayAmount} ({p.validity})</option>
                   ))}
                 </select>
               </div>

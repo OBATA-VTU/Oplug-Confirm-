@@ -264,8 +264,8 @@ export default function ElectricityPayment() {
                     className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-12 pr-10 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none cursor-pointer"
                   >
                     <option value="">Choose a disco provider</option>
-                    {services.map((s) => (
-                      <option key={s.serviceID} value={s.serviceID}>
+                    {services.map((s, index) => (
+                      <option key={`${s.serviceID}-${index}`} value={s.serviceID}>
                         {s.disco.toUpperCase()}
                       </option>
                     ))}

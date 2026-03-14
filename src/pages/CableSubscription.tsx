@@ -294,8 +294,8 @@ export default function CableSubscription() {
                     className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none"
                   >
                     <option value="">Select a plan</option>
-                    {filteredPlans.map(p => (
-                      <option key={p.serviceID} value={p.serviceID}>{p.cablePlan} - ₦{p.displayAmount}</option>
+                    {filteredPlans.map((p, index) => (
+                      <option key={`${p.serviceID}-${index}`} value={p.serviceID}>{p.cablePlan} - ₦{p.displayAmount}</option>
                     ))}
                   </select>
                 </div>

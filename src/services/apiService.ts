@@ -195,8 +195,13 @@ export const fundingService = {
     return response.data;
   },
 
-  async initializePaystack(data: { email: string; amount: number; reference: string }) {
+  async initializePaystack(data: { email: string; amount: number; reference: string; metadata?: any }) {
     const response = await axios.post('/api/funding/paystack-initialize', data);
+    return response.data;
+  },
+
+  async initializeDynamicAccount(data: { email: string; amount: number; reference: string }) {
+    const response = await axios.post('/api/funding/paystack-dynamic-account', data);
     return response.data;
   }
 };
