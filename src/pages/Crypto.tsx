@@ -84,7 +84,8 @@ export default function Crypto() {
         }
       } else if (activeTab === 'buy') {
         // Buy Crypto: Deduct Naira balance, send Crypto to user
-        if (profile.balance < Number(amount) * 1500) { // Assuming 1500 NGN/USD rate for simplicity
+        const currentBalance = profile?.walletBalance || 0;
+        if (currentBalance < Number(amount) * 1500) { // Assuming 1500 NGN/USD rate for simplicity
           setError('Insufficient balance to buy this amount of crypto');
           setLoading(false);
           return;
@@ -114,7 +115,7 @@ export default function Crypto() {
         </div>
         <div className="bg-blue-50 px-4 py-2 rounded-2xl border border-blue-100 flex items-center gap-2">
           <Wallet className="w-4 h-4 text-blue-600" />
-          <span className="text-sm font-black text-blue-700">₦{profile?.balance?.toLocaleString()}</span>
+          <span className="text-sm font-black text-blue-700">₦{profile?.walletBalance?.toLocaleString() || '0'}</span>
         </div>
       </div>
 

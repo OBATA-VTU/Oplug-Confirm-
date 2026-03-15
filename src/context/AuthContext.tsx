@@ -16,6 +16,7 @@ interface UserProfile {
   username: string;
   phone: string;
   walletBalance: number;
+  balance?: number; // Legacy support
   role: string;
   status: string;
   referralCode: string;
@@ -34,6 +35,18 @@ interface UserProfile {
   isProfileComplete: boolean;
   isAdmin?: boolean;
   createdAt: any;
+  photoURL?: string;
+  address?: string;
+  apiKey?: string;
+  webhookUrl?: string;
+  emailNotifications?: boolean;
+  pushNotifications?: boolean;
+  transactionAlerts?: boolean;
+  securityAlerts?: boolean;
+  airtimeBeneficiaries?: any[];
+  dataBeneficiaries?: any[];
+  cableBeneficiaries?: any[];
+  electricityBeneficiaries?: any[];
 }
 
 interface AuthContextType {
@@ -42,6 +55,7 @@ interface AuthContextType {
   loading: boolean;
   logout: () => Promise<void>;
   setTransactionPin: (pin: string) => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -52,13 +66,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let unsubscribeProfile: (() => void) | null = null;
+
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       
+      if (unsubscribeProfile) {
+        unsubscribeProfile();
+        unsubscribeProfile = null;
+      }
+
       if (firebaseUser) {
         // Listen to profile changes
         const profileRef = doc(db, 'users', firebaseUser.uid);
-        const unsubscribeProfile = onSnapshot(profileRef, (docSnap) => {
+        unsubscribeProfile = onSnapshot(profileRef, (docSnap) => {
           if (docSnap.exists()) {
             setProfile(docSnap.data() as UserProfile);
           } else {
@@ -83,23 +104,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               isProfileComplete: false,
               createdAt: new Date(),
             };
-            setDoc(profileRef, initialProfile);
+            setDoc(profileRef, initialProfile).catch(err => console.error('Error creating profile:', err));
             setProfile(initialProfile);
           }
           setLoading(false);
+        }, (error) => {
+          console.error('Profile listener error:', error);
+          setLoading(false);
         });
-
-        return () => unsubscribeProfile();
       } else {
         setProfile(null);
         setLoading(false);
       }
     });
 
-    return () => unsubscribeAuth();
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeProfile) unsubscribeProfile();
+    };
   }, []);
 
   const logout = () => signOut(auth);
+  
+  const refreshProfile = async () => {
+    if (!user) return;
+    const profileDoc = await getDoc(doc(db, 'users', user.uid));
+    if (profileDoc.exists()) {
+      setProfile(profileDoc.data() as UserProfile);
+    }
+  };
 
   const setTransactionPin = async (pin: string) => {
     if (!user) return;
@@ -111,7 +144,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, logout, setTransactionPin }}>
+    <AuthContext.Provider value={{ user, profile, loading, logout, setTransactionPin, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

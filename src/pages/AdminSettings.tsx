@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Save, Globe, Shield, Bell, Image as ImageIcon, Plus, X, RefreshCw, Database } from 'lucide-react';
+import { Save, Globe, Shield, Bell, Image as ImageIcon, Plus, X, RefreshCw, Database, Layout } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { vtuService, smmService } from '../services/apiService';
 
@@ -360,6 +360,94 @@ export default function AdminSettings() {
                     type="text" 
                     value={settings.fastDeliveryImage || ''}
                     onChange={(e) => setSettings({ ...settings, fastDeliveryImage: e.target.value })}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Partner Logos */}
+            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm space-y-6 md:col-span-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold flex items-center gap-2">
+                  <Layout className="w-5 h-5 text-blue-700" />
+                  Partner Logos
+                </h3>
+                <button 
+                  onClick={() => setSettings({ ...settings, supportedLogos: [...(settings.supportedLogos || []), ''] })}
+                  className="text-blue-700 text-xs font-black uppercase tracking-widest hover:underline"
+                >
+                  + Add Logo
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {(settings.supportedLogos || []).map((logo: string, idx: number) => (
+                  <div key={idx} className="flex gap-2">
+                    <input 
+                      type="text" 
+                      value={logo}
+                      onChange={(e) => {
+                        const newLogos = [...settings.supportedLogos];
+                        newLogos[idx] = e.target.value;
+                        setSettings({ ...settings, supportedLogos: newLogos });
+                      }}
+                      placeholder="Logo URL"
+                      className="flex-1 bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                    <button 
+                      onClick={() => {
+                        const newLogos = settings.supportedLogos.filter((_: any, i: number) => i !== idx);
+                        setSettings({ ...settings, supportedLogos: newLogos });
+                      }}
+                      className="p-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Homepage Illustrations */}
+            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm space-y-6 md:col-span-2">
+              <h3 className="text-xl font-bold flex items-center gap-2">
+                <Layout className="w-5 h-5 text-blue-700" />
+                Homepage Illustrations
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">Hero Illustration</label>
+                  <input 
+                    type="text" 
+                    value={settings.illustrationUrls?.hero || ''}
+                    onChange={(e) => setSettings({ 
+                      ...settings, 
+                      illustrationUrls: { ...(settings.illustrationUrls || {}), hero: e.target.value } 
+                    })}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">Features Illustration</label>
+                  <input 
+                    type="text" 
+                    value={settings.illustrationUrls?.features || ''}
+                    onChange={(e) => setSettings({ 
+                      ...settings, 
+                      illustrationUrls: { ...(settings.illustrationUrls || {}), features: e.target.value } 
+                    })}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">About Illustration</label>
+                  <input 
+                    type="text" 
+                    value={settings.illustrationUrls?.about || ''}
+                    onChange={(e) => setSettings({ 
+                      ...settings, 
+                      illustrationUrls: { ...(settings.illustrationUrls || {}), about: e.target.value } 
+                    })}
                     className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>

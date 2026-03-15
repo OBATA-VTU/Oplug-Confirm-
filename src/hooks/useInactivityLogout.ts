@@ -5,7 +5,7 @@ const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 
 export function useInactivityLogout() {
   const { user, logout } = useAuth();
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<any>(null);
 
   const resetTimer = () => {
     if (timeoutRef.current) {

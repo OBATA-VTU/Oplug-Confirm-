@@ -1,26 +1,15 @@
 import axios from 'axios';
 
-const API_KEY = import.meta.env.VITE_NOWPAYMENTS_API_KEY;
-const BASE_URL = 'https://api.nowpayments.io/v1';
-
-const nowPaymentsApi = axios.create({
-  baseURL: BASE_URL,
-  headers: {
-    'x-api-key': API_KEY,
-    'Content-Type': 'application/json',
-  },
-});
-
 export const nowpaymentsService = {
   // Get API Status
   getStatus: async () => {
-    const response = await nowPaymentsApi.get('/status');
+    const response = await axios.get('/api/crypto/status');
     return response.data;
   },
 
   // Get available currencies
   getCurrencies: async () => {
-    const response = await nowPaymentsApi.get('/currencies?fixed_rate=true');
+    const response = await axios.get('/api/crypto/currencies');
     return response.data;
   },
 
@@ -35,13 +24,13 @@ export const nowpaymentsService = {
     success_url?: string;
     cancel_url?: string;
   }) => {
-    const response = await nowPaymentsApi.post('/payment', data);
+    const response = await axios.post('/api/crypto/payment', data);
     return response.data;
   },
 
   // Get payment status
   getPaymentStatus: async (paymentId: string) => {
-    const response = await nowPaymentsApi.get(`/payment/${paymentId}`);
+    const response = await axios.get(`/api/crypto/payment/${paymentId}`);
     return response.data;
   },
 
@@ -55,13 +44,15 @@ export const nowpaymentsService = {
     success_url?: string;
     cancel_url?: string;
   }) => {
-    const response = await nowPaymentsApi.post('/invoice', data);
+    const response = await axios.post('/api/crypto/invoice', data);
     return response.data;
   },
 
   // Estimate price
   getEstimate: async (amount: number, from: string, to: string) => {
-    const response = await nowPaymentsApi.get(`/estimate?amount=${amount}&currency_from=${from}&currency_to=${to}`);
+    const response = await axios.get(`/api/crypto/estimate`, {
+      params: { amount, currency_from: from, currency_to: to }
+    });
     return response.data;
   }
 };

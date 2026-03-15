@@ -10,7 +10,7 @@ service cloud.firestore {
     // Fields:
     //   - id: string (required)
     //   - email: string (required, email format)
-    //   - balance: number (required)
+    //   - walletBalance: number (required)
     //   - role: string (required, 'user' | 'reseller' | 'admin')
     //   - username: string (required)
     //   - firstName: string (required)
@@ -67,10 +67,10 @@ service cloud.firestore {
     }
 
     function isValidUser(data) {
-      return data.keys().hasAll(['id', 'email', 'balance', 'role', 'username', 'firstName', 'lastName', 'phone']) &&
+      return data.keys().hasAll(['id', 'email', 'walletBalance', 'role', 'username', 'firstName', 'lastName', 'phone']) &&
              data.id is string &&
              data.email is string &&
-             data.balance is number &&
+             data.walletBalance is number &&
              data.role in ['user', 'reseller', 'admin'] &&
              data.username is string &&
              data.firstName is string &&
@@ -103,7 +103,7 @@ service cloud.firestore {
                        (request.resource.data.role == resource.data.role || (resource.data.role == 'user' && request.resource.data.role == 'reseller')) &&
                        // Prevent self-balance modification (should be done via server/transactions)
                        // EXCEPT when upgrading (balance is decremented)
-                       (request.resource.data.balance == resource.data.balance || (request.resource.data.balance < resource.data.balance && request.resource.data.role == 'reseller'))
+                       (request.resource.data.walletBalance == resource.data.walletBalance || (request.resource.data.walletBalance < resource.data.walletBalance && request.resource.data.role == 'reseller'))
                        ) || 
                        isAdmin();
     }

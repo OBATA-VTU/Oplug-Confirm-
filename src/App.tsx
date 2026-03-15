@@ -53,6 +53,7 @@ import ApiSandbox from './pages/docs/ApiSandbox';
 import AllServices from './pages/AllServices';
 import QuickPurchase from './pages/QuickPurchase';
 import ProfileSetupModal from './components/ProfileSetupModal';
+import ErrorBoundary from './components/ErrorBoundary';
 import { useInactivityLogout } from './hooks/useInactivityLogout';
 
 import AdminDashboard from './pages/AdminDashboard';
@@ -197,10 +198,12 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <AppContent />
-      </ToastProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <ToastProvider>
+          <AppContent />
+        </ToastProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }

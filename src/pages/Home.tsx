@@ -24,10 +24,16 @@ export default function Home() {
       try {
         const docSnap = await getDoc(doc(db, 'settings', 'general'));
         if (docSnap.exists()) {
-          setSettings(docSnap.data());
+          const data = docSnap.data();
+          console.log('Settings loaded:', data);
+          setSettings(data);
+        } else {
+          console.log('No settings document found');
+          setSettings({});
         }
       } catch (err) {
         console.error('Error fetching settings:', err);
+        setSettings({});
       }
     };
     fetchSettings();

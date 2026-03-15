@@ -8,6 +8,7 @@ import AuthLayout from '../components/AuthLayout';
 import { getFriendlyErrorMessage, handleFirestoreError, OperationType } from '../lib/errorHandlers';
 import { useToast } from '../context/ToastContext';
 import { fundingService, emailService, notificationService } from '../services/apiService';
+import axios from 'axios';
 
 export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
@@ -33,16 +34,9 @@ export default function Signup() {
     setLoading(true);
     setError('');
     try {
-      // Check if username exists
-      let querySnapshot;
-      try {
-        const q = query(collection(db, 'users'), where('username', '==', username.toLowerCase()));
-        querySnapshot = await getDocs(q);
-      } catch (err) {
-        handleFirestoreError(err, OperationType.LIST, 'users', auth);
-      }
-
-      if (querySnapshot && !querySnapshot.empty) {
+      // Check if username exists via server-side API (avoids permission issues and ghost accounts)
+      const checkRes = await axios.get(`/api/auth/check-username/${username}`);
+      if (!checkRes.data.available) {
         throw new Error('Username already taken');
       }
 

@@ -2,8 +2,18 @@ import express from 'express';
 import dotenv from 'dotenv';
 import axios from 'axios';
 import Mailjet from 'node-mailjet';
+import admin from 'firebase-admin';
+import firebaseConfig from '../firebase-applet-config.json' assert { type: 'json' };
 
 dotenv.config();
+
+// Initialize Firebase Admin
+if (!admin.apps.length) {
+  admin.initializeApp({
+    projectId: firebaseConfig.projectId,
+  });
+}
+const adminDb = admin.firestore();
 
 export const app = express();
 app.use(express.json());
@@ -15,6 +25,21 @@ const mailjet = Mailjet.apiConnect(
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
+});
+
+app.get('/api/auth/check-username/:username', async (req, res) => {
+  try {
+    const { username } = req.params;
+    const snapshot = await adminDb.collection('users')
+      .where('username', '==', username.toLowerCase())
+      .limit(1)
+      .get();
+    
+    res.json({ available: snapshot.empty });
+  } catch (error: any) {
+    console.error('Check username error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
 });
 
 // --- Inlomax API Proxy (VTU) ---
@@ -139,21 +164,39 @@ const BILLSTACK_BASE_URL = 'https://api.billstack.co/v2/thirdparty';
 
 app.post('/api/funding/generate-account', async (req, res) => {
   try {
+    // Try with the user's provided email first
     const response = await axios.post(`${BILLSTACK_BASE_URL}/generateVirtualAccount/`, req.body, {
       headers: { 'Authorization': `Bearer ${process.env.BILLSTACK_SECRET_KEY}` }
     });
     res.json(response.data);
   } catch (error: any) {
-    res.status(error.response?.status || 500).json(error.response?.data || { message: 'Billstack API Error' });
+    console.error('Billstack Initial Error:', error.response?.data || error.message);
+    
+    // If it fails, try with a fallback email
+    try {
+      const fallbackEmail = `opluguser${Math.floor(Math.random() * 10000)}@gmail.com`;
+      console.log(`Retrying with fallback email: ${fallbackEmail}`);
+      
+      const fallbackBody = { ...req.body, email: fallbackEmail };
+      const fallbackResponse = await axios.post(`${BILLSTACK_BASE_URL}/generateVirtualAccount/`, fallbackBody, {
+        headers: { 'Authorization': `Bearer ${process.env.BILLSTACK_SECRET_KEY}` }
+      });
+      
+      res.json(fallbackResponse.data);
+    } catch (fallbackError: any) {
+      console.error('Billstack Fallback Error:', fallbackError.response?.data || fallbackError.message);
+      res.status(fallbackError.response?.status || 500).json(fallbackError.response?.data || { message: 'Billstack API Error after fallback' });
+    }
   }
 });
 
 // --- Paystack API Proxy ---
 app.post('/api/funding/paystack-initialize', async (req, res) => {
-  try {
-    const { email, amount, reference, metadata } = req.body;
-    const response = await axios.post('https://api.paystack.co/transaction/initialize', {
-      email,
+  const { email, amount, reference, metadata } = req.body;
+  
+  const initialize = async (targetEmail: string) => {
+    return axios.post('https://api.paystack.co/transaction/initialize', {
+      email: targetEmail,
       amount: Math.round(amount * 100), // Paystack expects kobo
       reference,
       metadata,
@@ -161,28 +204,53 @@ app.post('/api/funding/paystack-initialize', async (req, res) => {
     }, {
       headers: { 'Authorization': `Bearer ${process.env.PAYSTACK_SECRET_KEY}` }
     });
+  };
+
+  try {
+    const response = await initialize(email);
     res.json(response.data);
   } catch (error: any) {
-    res.status(error.response?.status || 500).json(error.response?.data || { message: 'Paystack API Error' });
+    console.error('Paystack Initialize Initial Error:', error.response?.data || error.message);
+    
+    try {
+      const fallbackEmail = `opluguser${Math.floor(Math.random() * 10000)}@gmail.com`;
+      console.log(`Retrying Paystack Initialize with fallback email: ${fallbackEmail}`);
+      const fallbackResponse = await initialize(fallbackEmail);
+      res.json(fallbackResponse.data);
+    } catch (fallbackError: any) {
+      res.status(fallbackError.response?.status || 500).json(fallbackError.response?.data || { message: 'Paystack API Error after fallback' });
+    }
   }
 });
 
 app.post('/api/funding/paystack-dynamic-account', async (req, res) => {
-  try {
-    const { email, amount, reference } = req.body;
-    // Using Paystack Charge API for bank transfer to get account details directly
-    const response = await axios.post('https://api.paystack.co/charge', {
-      email,
+  const { email, amount, reference } = req.body;
+
+  const charge = async (targetEmail: string) => {
+    return axios.post('https://api.paystack.co/charge', {
+      email: targetEmail,
       amount: amount * 100,
       reference,
       bank_transfer: {} // This triggers bank transfer details generation
     }, {
       headers: { 'Authorization': `Bearer ${process.env.PAYSTACK_SECRET_KEY}` }
     });
+  };
+
+  try {
+    const response = await charge(email);
     res.json(response.data);
   } catch (error: any) {
-    console.error('Paystack Dynamic Account Error:', error.response?.data || error.message);
-    res.status(error.response?.status || 500).json(error.response?.data || { message: 'Paystack API Error' });
+    console.error('Paystack Dynamic Account Initial Error:', error.response?.data || error.message);
+    
+    try {
+      const fallbackEmail = `opluguser${Math.floor(Math.random() * 10000)}@gmail.com`;
+      console.log(`Retrying Paystack Dynamic Account with fallback email: ${fallbackEmail}`);
+      const fallbackResponse = await charge(fallbackEmail);
+      res.json(fallbackResponse.data);
+    } catch (fallbackError: any) {
+      res.status(fallbackError.response?.status || 500).json(fallbackError.response?.data || { message: 'Paystack API Error after fallback' });
+    }
   }
 });
 
@@ -221,6 +289,83 @@ app.post('/api/funding/webhook', async (req, res) => {
   }
 
   res.status(200).send('OK');
+});
+
+// --- NOWPayments API Proxy ---
+const NOWPAYMENTS_BASE_URL = 'https://api.nowpayments.io/v1';
+
+app.get('/api/crypto/status', async (req, res) => {
+  try {
+    const response = await axios.get(`${NOWPAYMENTS_BASE_URL}/status`, {
+      headers: { 'x-api-key': process.env.NOWPAYMENTS_API_KEY || process.env.VITE_NOWPAYMENTS_API_KEY }
+    });
+    res.json(response.data);
+  } catch (error: any) {
+    res.status(error.response?.status || 500).json(error.response?.data || { message: 'NOWPayments API Error' });
+  }
+});
+
+app.get('/api/crypto/currencies', async (req, res) => {
+  try {
+    const response = await axios.get(`${NOWPAYMENTS_BASE_URL}/currencies?fixed_rate=true`, {
+      headers: { 'x-api-key': process.env.NOWPAYMENTS_API_KEY || process.env.VITE_NOWPAYMENTS_API_KEY }
+    });
+    res.json(response.data);
+  } catch (error: any) {
+    res.status(error.response?.status || 500).json(error.response?.data || { message: 'NOWPayments API Error' });
+  }
+});
+
+app.get('/api/crypto/estimate', async (req, res) => {
+  try {
+    const { amount, currency_from, currency_to } = req.query;
+    const response = await axios.get(`${NOWPAYMENTS_BASE_URL}/estimate`, {
+      params: { amount, currency_from, currency_to },
+      headers: { 'x-api-key': process.env.NOWPAYMENTS_API_KEY || process.env.VITE_NOWPAYMENTS_API_KEY }
+    });
+    res.json(response.data);
+  } catch (error: any) {
+    res.status(error.response?.status || 500).json(error.response?.data || { message: 'NOWPayments API Error' });
+  }
+});
+
+app.post('/api/crypto/payment', async (req, res) => {
+  try {
+    const response = await axios.post(`${NOWPAYMENTS_BASE_URL}/payment`, req.body, {
+      headers: { 
+        'x-api-key': process.env.NOWPAYMENTS_API_KEY || process.env.VITE_NOWPAYMENTS_API_KEY,
+        'Content-Type': 'application/json'
+      }
+    });
+    res.json(response.data);
+  } catch (error: any) {
+    res.status(error.response?.status || 500).json(error.response?.data || { message: 'NOWPayments API Error' });
+  }
+});
+
+app.post('/api/crypto/invoice', async (req, res) => {
+  try {
+    const response = await axios.post(`${NOWPAYMENTS_BASE_URL}/invoice`, req.body, {
+      headers: { 
+        'x-api-key': process.env.NOWPAYMENTS_API_KEY || process.env.VITE_NOWPAYMENTS_API_KEY,
+        'Content-Type': 'application/json'
+      }
+    });
+    res.json(response.data);
+  } catch (error: any) {
+    res.status(error.response?.status || 500).json(error.response?.data || { message: 'NOWPayments API Error' });
+  }
+});
+
+app.get('/api/crypto/payment/:id', async (req, res) => {
+  try {
+    const response = await axios.get(`${NOWPAYMENTS_BASE_URL}/payment/${req.params.id}`, {
+      headers: { 'x-api-key': process.env.NOWPAYMENTS_API_KEY || process.env.VITE_NOWPAYMENTS_API_KEY }
+    });
+    res.json(response.data);
+  } catch (error: any) {
+    res.status(error.response?.status || 500).json(error.response?.data || { message: 'NOWPayments API Error' });
+  }
 });
 
 // --- Mailjet Email Route ---

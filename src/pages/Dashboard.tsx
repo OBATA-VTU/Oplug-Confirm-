@@ -34,9 +34,12 @@ export default function Dashboard() {
         const snap = await getDoc(doc(db, 'settings', 'general'));
         if (snap.exists()) {
           setSettings(snap.data());
+        } else {
+          setSettings({});
         }
       } catch (err) {
         console.error('Error fetching settings:', err);
+        setSettings({});
       }
     };
     fetchSettings();
