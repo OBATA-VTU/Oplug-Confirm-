@@ -33,6 +33,7 @@ interface UserProfile {
     reference: string;
   };
   isProfileComplete: boolean;
+  isPhoneVerified?: boolean;
   isAdmin?: boolean;
   createdAt: any;
   photoURL?: string;
@@ -102,6 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               isPinSet: false,
               transactionPin: '',
               isProfileComplete: false,
+              isPhoneVerified: false,
               createdAt: new Date(),
             };
             setDoc(profileRef, initialProfile).catch(err => console.error('Error creating profile:', err));

@@ -65,6 +65,7 @@ export default function Signup() {
           isPinSet: false,
           transactionPin: '',
           isProfileComplete: false,
+          isPhoneVerified: false,
           createdAt: new Date(),
         });
       } catch (err) {
@@ -111,8 +112,8 @@ export default function Signup() {
       // Send Welcome Email
       emailService.sendWelcomeEmail(email.toLowerCase(), firstName);
 
-      showToast('success', 'Account Created!', 'Welcome to Oplug! Your account and virtual funding account are ready.');
-      navigate('/dashboard');
+      showToast('success', 'Account Created!', 'Welcome to Oplug! Please verify your phone number to continue.');
+      navigate('/verify-phone');
     } catch (err: any) {
       const friendlyMsg = getFriendlyErrorMessage(err);
       setError(friendlyMsg);

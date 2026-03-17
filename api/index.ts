@@ -338,20 +338,53 @@ app.post('/api/funding/webhook', async (req, res) => {
     
     // Handle Quick Purchase
     if (metadata && metadata.type === 'quick_purchase') {
-      const { vtuType, network, phone, planId } = metadata;
+      const { serviceType, network, phone, planId, meterType, quantity } = metadata;
       try {
-        const endpoint = vtuType === 'data' ? '/data' : '/airtime';
-        const payload = vtuType === 'data' 
-          ? { serviceID: planId, mobileNumber: phone }
-          : { serviceID: planId, mobileNumber: phone, amount: metadata.amount };
+        let endpoint = '';
+        let payload: any = {};
 
-        await axios.post(`${INLOMAX_BASE_URL}${endpoint}`, payload, {
-          headers: { 'Authorization': `Token ${process.env.INLOMAX_API_KEY}` }
-        });
-        console.log(`Quick ${vtuType} purchase successful for ${phone}`);
+        switch (serviceType) {
+          case 'data':
+            endpoint = '/data';
+            payload = { serviceID: planId, mobileNumber: phone };
+            break;
+          case 'airtime':
+            endpoint = '/airtime';
+            payload = { serviceID: planId, mobileNumber: phone, amount: metadata.amount };
+            break;
+          case 'cable':
+            endpoint = '/subcable';
+            payload = { serviceID: planId, smartcard: phone };
+            break;
+          case 'electricity':
+            endpoint = '/payelectric';
+            payload = { serviceID: planId, meter: phone, type: meterType };
+            break;
+          case 'education':
+            endpoint = '/education';
+            payload = { serviceID: planId, phone: phone };
+            break;
+          case 'smm':
+            // SMM uses OgaViral
+            await axios.post(OGAVIRAL_BASE_URL, {
+              key: process.env.OGAVIRAL_API_KEY,
+              action: 'add',
+              service: planId,
+              link: phone,
+              quantity: quantity
+            });
+            console.log(`Quick SMM purchase successful for ${phone}`);
+            return res.status(200).send('OK');
+        }
+
+        if (endpoint) {
+          await axios.post(`${INLOMAX_BASE_URL}${endpoint}`, payload, {
+            headers: { 'Authorization': `Token ${process.env.INLOMAX_API_KEY}` }
+          });
+          console.log(`Quick ${serviceType} purchase successful for ${phone}`);
+        }
       } catch (err: any) {
         console.error('Quick Purchase Fulfillment Error:', err.response?.data || err.message);
-        // In a real app, you'd queue this for retry or notify admin
       }
     }
     

@@ -8,6 +8,7 @@ import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import VerifyPhone from './pages/VerifyPhone';
 import ForgotPassword from './pages/ForgotPassword';
 import BuyAirtime from './pages/BuyAirtime';
 import BuyData from './pages/BuyData';
@@ -66,6 +67,7 @@ import AdminNotifications from './pages/AdminNotifications';
 
 function ProtectedRoute({ children, adminOnly = false }: { children: React.ReactNode, adminOnly?: boolean }) {
   const { user, profile, loading } = useAuth();
+  const location = useLocation();
   
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -74,6 +76,10 @@ function ProtectedRoute({ children, adminOnly = false }: { children: React.React
   );
   
   if (!user) return <Navigate to="/login" />;
+  
+  if (!profile?.isPhoneVerified && location.pathname !== '/verify-phone') {
+    return <Navigate to="/verify-phone" />;
+  }
   
   if (adminOnly && !profile?.isAdmin) {
     return <Navigate to="/dashboard" />;
@@ -125,6 +131,7 @@ function AppRoutes() {
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
+      <Route path="/verify-phone" element={<VerifyPhone />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/about" element={<About />} />
       <Route path="/terms" element={<Terms />} />

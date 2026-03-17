@@ -16,8 +16,14 @@ export default function QuickPurchase() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'data' | 'airtime' | 'cable' | 'electricity' | 'education' | 'smm'>('data');
   const [network, setNetwork] = useState('');
+  const [provider, setProvider] = useState('');
   const [plan, setPlan] = useState<any>(null);
   const [phone, setPhone] = useState('');
+  const [meterType, setMeterType] = useState<'prepaid' | 'postpaid'>('prepaid');
+  const [isValidated, setIsValidated] = useState(false);
+  const [validationData, setValidationData] = useState<any>(null);
+  const [validating, setValidating] = useState(false);
+  const [quantity, setQuantity] = useState(1);
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -36,6 +42,7 @@ export default function QuickPurchase() {
       setEmail(profile.email);
     }
   }, [profile]);
+
   useEffect(() => {
     const fetchServices = async () => {
       try {
@@ -64,6 +71,32 @@ export default function QuickPurchase() {
     { id: '9mobile', name: '9mobile', color: 'bg-emerald-800' },
   ];
 
+  const cableProviders = [
+    { id: 'dstv', name: 'DSTV' },
+    { id: 'gotv', name: 'GOTV' },
+    { id: 'startimes', name: 'Startimes' },
+  ];
+
+  const electricProviders = [
+    { id: 'ikedc', name: 'Ikeja Electric' },
+    { id: 'ekedc', name: 'Eko Electric' },
+    { id: 'aedc', name: 'Abuja Electric' },
+    { id: 'kedco', name: 'Kano Electric' },
+    { id: 'phedc', name: 'Port Harcourt Electric' },
+    { id: 'jos', name: 'Jos Electric' },
+    { id: 'ibedc', name: 'Ibadan Electric' },
+    { id: 'kaedco', name: 'Kaduna Electric' },
+    { id: 'eedc', name: 'Enugu Electric' },
+    { id: 'bedc', name: 'Benin Electric' },
+  ];
+
+  const educationProviders = [
+    { id: 'waec', name: 'WAEC' },
+    { id: 'neco', name: 'NECO' },
+    { id: 'jamb', name: 'JAMB' },
+    { id: 'nabteb', name: 'NABTEB' },
+  ];
+
   const getFilteredPlans = () => {
     if (!services) return [];
     
@@ -73,11 +106,11 @@ export default function QuickPurchase() {
       case 'airtime':
         return (services.airtimePlans || []).filter((p: any) => p.network.toLowerCase().includes(network.toLowerCase()));
       case 'cable':
-        return (services.cablePlans || []);
+        return (services.cablePlans || []).filter((p: any) => p.cablePlan.toLowerCase().includes(provider.toLowerCase()));
       case 'electricity':
-        return (services.electricPlans || []);
+        return (services.electricPlans || []).filter((p: any) => p.disco.toLowerCase().includes(provider.toLowerCase()));
       case 'education':
-        return (services.educationPlans || []);
+        return (services.educationPlans || []).filter((p: any) => p.name.toLowerCase().includes(provider.toLowerCase()));
       case 'smm':
         return smmServices.filter(s => 
           s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -90,16 +123,57 @@ export default function QuickPurchase() {
 
   const filteredPlans = getFilteredPlans();
 
+  const handleValidate = async () => {
+    if (!phone || !plan) {
+      setError('Please select a plan and enter the number');
+      return;
+    }
+
+    setValidating(true);
+    setError('');
+    try {
+      let res;
+      if (activeTab === 'cable') {
+        res = await vtuService.validateCable({
+          serviceID: plan.serviceID || plan.service,
+          iucNum: phone
+        });
+      } else if (activeTab === 'electricity') {
+        res = await vtuService.validateMeter({
+          serviceID: plan.serviceID || plan.service,
+          meterNum: phone,
+          meterType: meterType === 'prepaid' ? 1 : 2
+        });
+      }
+
+      if (res?.status === 'success') {
+        setIsValidated(true);
+        setValidationData(res.data);
+      } else {
+        setError(res?.message || 'Validation failed. Please check the number.');
+      }
+    } catch (err) {
+      setError('Validation failed. Please try again.');
+    } finally {
+      setValidating(false);
+    }
+  };
+
   const handlePurchase = async () => {
     if (!email || !phone || !plan) {
       setError('Please fill all required fields');
       return;
     }
 
+    if ((activeTab === 'cable' || activeTab === 'electricity') && !isValidated) {
+      setError('Please validate the number first');
+      return;
+    }
+
     setLoading(true);
     setError('');
     try {
-      const amount = activeTab === 'smm' ? Number(plan.rate) : Number(plan.amount || plan.displayAmount);
+      const amount = activeTab === 'smm' ? Number(plan.rate) * (quantity || 1) : Number(plan.amount || plan.displayAmount);
       const fee = amount * 0.02;
       const totalAmount = amount + fee;
 
@@ -110,10 +184,12 @@ export default function QuickPurchase() {
         metadata: {
           type: 'quick_purchase',
           serviceType: activeTab,
-          network,
+          network: network || provider,
           phone,
           planId: plan.serviceID || plan.service,
-          amount: amount
+          amount: amount,
+          meterType: activeTab === 'electricity' ? meterType : undefined,
+          quantity: activeTab === 'smm' ? quantity : undefined
         }
       } as any);
 
@@ -180,77 +256,158 @@ export default function QuickPurchase() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             <div className="space-y-8">
-              {/* Network Selection for Data/Airtime */}
-              {(activeTab === 'data' || activeTab === 'airtime') && (
-                <div className="space-y-4">
-                  <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-2">Select Network</label>
-                  <div className="grid grid-cols-4 gap-3">
-                    {networks.map((net) => (
-                      <button
-                        key={net.id}
-                        onClick={() => { setNetwork(net.name); setPlan(null); }}
-                        className={cn(
-                          "aspect-square rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-2 group",
-                          network === net.name ? "border-blue-600 bg-blue-50" : "border-gray-100 bg-gray-50 hover:border-gray-200"
-                        )}
-                      >
-                        <div className={cn("w-8 h-8 rounded-full shadow-sm group-hover:scale-110 transition-transform", net.color)} />
-                        <span className="text-[10px] font-black">{net.name}</span>
-                      </button>
-                    ))}
+                {/* Network Selection for Data/Airtime */}
+                {(activeTab === 'data' || activeTab === 'airtime') && (
+                  <div className="space-y-4">
+                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-2">Select Network</label>
+                    <div className="grid grid-cols-4 gap-3">
+                      {networks.map((net) => (
+                        <button
+                          key={net.id}
+                          onClick={() => { setNetwork(net.name); setPlan(null); }}
+                          className={cn(
+                            "aspect-square rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-2 group",
+                            network === net.name ? "border-blue-600 bg-blue-50" : "border-gray-100 bg-gray-50 hover:border-gray-200"
+                          )}
+                        >
+                          <div className={cn("w-8 h-8 rounded-full shadow-sm group-hover:scale-110 transition-transform", net.color)} />
+                          <span className="text-[10px] font-black">{net.name}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* SMM Search */}
-              {activeTab === 'smm' && (
+                {/* Provider Selection for Cable/Electricity/Education */}
+                {(activeTab === 'cable' || activeTab === 'electricity' || activeTab === 'education') && (
+                  <div className="space-y-4">
+                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-2">Select Provider</label>
+                    <select 
+                      value={provider}
+                      onChange={(e) => { setProvider(e.target.value); setPlan(null); }}
+                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none appearance-none"
+                    >
+                      <option value="">Choose provider...</option>
+                      {(activeTab === 'cable' ? cableProviders : activeTab === 'electricity' ? electricProviders : educationProviders).map((p) => (
+                        <option key={p.id} value={p.name}>{p.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Meter Type for Electricity */}
+                {activeTab === 'electricity' && (
+                  <div className="space-y-4">
+                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-2">Meter Type</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {['prepaid', 'postpaid'].map((type) => (
+                        <button
+                          key={type}
+                          onClick={() => setMeterType(type as 'prepaid' | 'postpaid')}
+                          className={cn(
+                            "py-4 rounded-2xl border-2 transition-all font-black uppercase tracking-widest text-[10px]",
+                            meterType === type ? "border-blue-600 bg-blue-50 text-blue-700" : "border-gray-100 bg-gray-50 text-gray-400"
+                          )}
+                        >
+                          {type}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* SMM Search */}
+                {activeTab === 'smm' && (
+                  <div className="space-y-4">
+                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-2">Search Service</label>
+                    <div className="relative">
+                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input 
+                        type="text"
+                        placeholder="Search for Instagram, TikTok, etc..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Plan Selection */}
                 <div className="space-y-4">
-                  <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-2">Search Service</label>
-                  <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-2">Select Plan</label>
+                  <select 
+                    value={plan?.serviceID || plan?.service || ''}
+                    onChange={(e) => {
+                      const selected = filteredPlans.find((p: any) => (p.serviceID || p.service).toString() === e.target.value);
+                      setPlan(selected);
+                    }}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none appearance-none"
+                  >
+                    <option value="">Choose a plan...</option>
+                    {filteredPlans.map((p: any, index: number) => (
+                      <option key={`${p.serviceID || p.service}-${index}`} value={p.serviceID || p.service}>
+                        {p.name || p.dataPlan || p.cablePlan || p.disco} - ₦{p.amount || p.displayAmount || p.rate}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Quantity for SMM */}
+                {activeTab === 'smm' && (
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-2">Quantity</label>
                     <input 
-                      type="text"
-                      placeholder="Search for Instagram, TikTok, etc..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none"
+                      type="number"
+                      placeholder="1000"
+                      value={quantity}
+                      onChange={(e) => setQuantity(Number(e.target.value))}
+                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none"
                     />
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Plan Selection */}
-              <div className="space-y-4">
-                <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-2">Select Plan</label>
-                <select 
-                  value={plan?.serviceID || plan?.service || ''}
-                  onChange={(e) => {
-                    const selected = filteredPlans.find((p: any) => (p.serviceID || p.service).toString() === e.target.value);
-                    setPlan(selected);
-                  }}
-                  className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none appearance-none"
-                >
-                  <option value="">Choose a plan...</option>
-                  {filteredPlans.map((p: any, index: number) => (
-                    <option key={`${p.serviceID || p.service}-${index}`} value={p.serviceID || p.service}>
-                      {p.name || p.dataPlan || p.cablePlan || p.disco} - ₦{p.amount || p.displayAmount || p.rate}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Contact Info */}
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-2">Phone Number / Link</label>
-                  <input 
-                    type="text"
-                    placeholder={activeTab === 'smm' ? "Enter profile or post link" : "08012345678"}
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
+                {/* Contact Info */}
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-2">
+                      {activeTab === 'cable' ? 'Smartcard Number' : 
+                       activeTab === 'electricity' ? 'Meter Number' : 
+                       activeTab === 'smm' ? 'Link' : 
+                       'Phone Number'}
+                    </label>
+                    <input 
+                      type="text"
+                      placeholder={activeTab === 'smm' ? "Enter profile or post link" : 
+                                   activeTab === 'cable' ? "Enter smartcard number" :
+                                   activeTab === 'electricity' ? "Enter meter number" :
+                                   "08012345678"}
+                      value={phone}
+                      onChange={(e) => { setPhone(e.target.value); setIsValidated(false); }}
+                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                    {(activeTab === 'cable' || activeTab === 'electricity') && (
+                      <button
+                        type="button"
+                        onClick={handleValidate}
+                        disabled={validating || !phone || !plan}
+                        className="mt-2 w-full py-3 bg-blue-50 text-blue-700 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                      >
+                        {validating ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+                          <>
+                            <ShieldCheck className="w-4 h-4" />
+                            Validate {activeTab === 'cable' ? 'Smartcard' : 'Meter'}
+                          </>
+                        )}
+                      </button>
+                    )}
+                    {isValidated && validationData && (
+                      <div className="mt-2 p-4 bg-emerald-50 border border-emerald-100 rounded-2xl">
+                        <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest mb-1">Customer Details</p>
+                        <p className="text-sm font-bold text-emerald-900">{validationData.customerName || validationData.name || 'Validated Successfully'}</p>
+                      </div>
+                    )}
+                  </div>
                 <div className="space-y-2">
                   <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-2">Email Address</label>
                   <input 
