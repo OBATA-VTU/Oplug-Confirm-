@@ -188,8 +188,8 @@ export default function QuickPurchase() {
           phone,
           planId: plan.serviceID || plan.service,
           amount: amount,
-          meterType: activeTab === 'electricity' ? meterType : undefined,
-          quantity: activeTab === 'smm' ? quantity : undefined
+          meterType: activeTab === 'electricity' ? (meterType === 'prepaid' ? 1 : 2) : undefined,
+          quantity: (activeTab === 'smm' || activeTab === 'education') ? quantity : undefined
         }
       } as any);
 
@@ -353,13 +353,14 @@ export default function QuickPurchase() {
                   </select>
                 </div>
 
-                {/* Quantity for SMM */}
-                {activeTab === 'smm' && (
+                {/* Quantity for SMM & Education */}
+                {(activeTab === 'smm' || activeTab === 'education') && (
                   <div className="space-y-2">
                     <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-2">Quantity</label>
                     <input 
                       type="number"
-                      placeholder="1000"
+                      placeholder="1"
+                      min="1"
                       value={quantity}
                       onChange={(e) => setQuantity(Number(e.target.value))}
                       className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none"

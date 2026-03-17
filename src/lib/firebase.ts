@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
+import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore, getDocFromServer, doc } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
@@ -18,7 +18,6 @@ export const db = databaseId && databaseId !== '(default)'
 
 export const storage = getStorage(app);
 export const googleProvider = new GoogleAuthProvider();
-export { RecaptchaVerifier, signInWithPhoneNumber };
 
 // Validate Connection to Firestore
 async function testConnection() {

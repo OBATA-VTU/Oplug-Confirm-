@@ -1,8 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { smmService } from '../services/apiService';
-import { Search, ShoppingCart, Info, ExternalLink, Globe, Plus, X } from 'lucide-react';
-import { motion } from 'motion/react';
+import { 
+  Search, ShoppingCart, Globe, Plus, X, 
+  Filter, Zap, TrendingUp, Users, Heart, 
+  MessageCircle, Play, Eye, Star, CheckCircle2,
+  AlertCircle, Info, Loader2
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/firebase';
@@ -10,11 +15,22 @@ import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, increment 
 import PinModal from '../components/PinModal';
 import ProcessingModal from '../components/ProcessingModal';
 
+const CATEGORIES = [
+  { id: 'All', name: 'All Services', icon: Globe },
+  { id: 'WhatsApp', name: 'WhatsApp', icon: MessageCircle },
+  { id: 'Instagram', name: 'Instagram', icon: Heart },
+  { id: 'Twitter', name: 'Twitter', icon: TrendingUp },
+  { id: 'Facebook', name: 'Facebook', icon: Users },
+  { id: 'TikTok', name: 'TikTok', icon: Play },
+  { id: 'YouTube', name: 'YouTube', icon: Eye },
+  { id: 'Telegram', name: 'Telegram', icon: Zap },
+  { id: 'Others', name: 'Others', icon: Star },
+];
+
 export default function SmmServices() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [services, setServices] = useState<any[]>([]);
-  const [filteredServices, setFilteredServices] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [loading, setLoading] = useState(false);
@@ -59,7 +75,6 @@ export default function SmmServices() {
             name: s.name.replace(/Ogaviral/gi, 'Oplug')
           }));
           setServices(updatedServices);
-          setFilteredServices(updatedServices);
         }
       } catch (error) {
         console.error('Failed to fetch SMM services', error);
@@ -70,7 +85,7 @@ export default function SmmServices() {
     fetchServices();
   }, []);
 
-  useEffect(() => {
+  const filteredServices = useMemo(() => {
     let result = services;
     if (selectedCategory !== 'All') {
       if (selectedCategory === 'Others') {
@@ -86,7 +101,7 @@ export default function SmmServices() {
         s.category.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    setFilteredServices(result);
+    return result;
   }, [searchTerm, selectedCategory, services]);
 
   const calculatePrice = (baseRate: number) => {
@@ -144,7 +159,6 @@ export default function SmmServices() {
         setProcessStatus('success');
         setProcessMessage(`Order placed successfully! Order ID: ${response.order}`);
         
-        // Record transaction
         if (user) {
           await addDoc(collection(db, 'transactions'), {
             userId: user.uid,
@@ -156,7 +170,6 @@ export default function SmmServices() {
             createdAt: serverTimestamp()
           });
 
-          // Deduct from local balance
           await updateDoc(doc(db, 'users', user.uid), {
             balance: increment(-totalPrice)
           });
@@ -177,204 +190,298 @@ export default function SmmServices() {
     }
   };
 
-  const categories = ['All', 'WhatsApp', 'Instagram', 'Twitter', 'Gmail', 'Spotify', 'Facebook', 'TikTok', 'YouTube', 'Telegram', 'Others'];
-
   return (
-    <div className="max-w-6xl mx-auto space-y-8 pb-20">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight text-gray-900">SMM Booster</h1>
-          <p className="text-gray-500 font-medium">Boost your social media presence instantly.</p>
-        </div>
-        <div className="flex items-center gap-3 bg-white p-2 rounded-2xl border border-gray-100 shadow-sm">
-          <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
-            <ShoppingCart className="w-5 h-5 text-blue-700" />
-          </div>
-          <div className="pr-4">
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Services</p>
-            <p className="text-sm font-black text-gray-900">{services.length}</p>
-          </div>
+    <div className="max-w-7xl mx-auto space-y-10 pb-20 px-4">
+      {/* Hero Section */}
+      <div className="relative overflow-hidden bg-blue-700 rounded-[3rem] p-12 text-white shadow-2xl shadow-blue-200">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -mr-48 -mt-48 blur-3xl animate-pulse" />
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-600 rounded-full -ml-32 -mb-32 blur-3xl" />
+        
+        <div className="relative z-10 max-w-2xl">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-4"
+          >
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full border border-white/20">
+              <TrendingUp className="w-4 h-4 text-blue-200" />
+              <span className="text-[10px] font-black uppercase tracking-widest">Premium SMM Booster</span>
+            </div>
+            <h1 className="text-5xl font-black tracking-tight leading-tight">
+              Scale Your Social <br />
+              <span className="text-blue-200">Presence Instantly</span>
+            </h1>
+            <p className="text-blue-100 text-lg font-medium max-w-lg">
+              Get high-quality followers, likes, views, and engagement across all major social platforms at the best rates.
+            </p>
+          </motion.div>
         </div>
       </div>
 
-      <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100">
-        <div className="flex flex-col lg:flex-row gap-6 mb-10">
-          <div className="flex-1 relative group">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-700 transition-colors" />
+      {/* Stats & Search Bar */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 bg-white rounded-[2.5rem] p-4 shadow-sm border border-gray-100 flex items-center gap-4">
+          <div className="relative flex-1 group">
+            <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-700 transition-colors" />
             <input 
               type="text"
               placeholder="Search for services (e.g. Instagram Followers)..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-14 pr-6 py-5 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+              className="w-full bg-gray-50 border-none rounded-2xl pl-16 pr-6 py-5 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all"
             />
           </div>
-          <div className="lg:w-72">
-            <select 
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-5 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none cursor-pointer"
-            >
-              {categories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
+        </div>
+        <div className="bg-white rounded-[2.5rem] p-4 shadow-sm border border-gray-100 flex items-center justify-between px-8">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center">
+              <Zap className="w-6 h-6 text-blue-700" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Active Services</p>
+              <p className="text-xl font-black text-gray-900">{services.length}</p>
+            </div>
+          </div>
+          <div className="h-10 w-px bg-gray-100" />
+          <div className="text-right">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Your Balance</p>
+            <p className="text-xl font-black text-blue-700">₦{profile?.balance?.toLocaleString()}</p>
           </div>
         </div>
-
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4">
-            <div className="w-12 h-12 border-4 border-blue-100 border-t-blue-700 rounded-full animate-spin" />
-            <p className="text-sm font-bold text-gray-400 animate-pulse">Fetching premium services...</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filteredServices.map((service) => (
-              <motion.div 
-                key={service.service}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-gray-50/50 border border-gray-100 rounded-[2rem] p-6 hover:border-blue-500/30 hover:bg-white hover:shadow-xl hover:shadow-blue-500/5 transition-all group flex flex-col"
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <span className="text-[10px] font-black uppercase tracking-[0.15em] text-blue-700 bg-blue-50 px-3 py-1.5 rounded-xl">
-                    {service.category}
-                  </span>
-                  <div className="flex flex-col items-end">
-                    <span className="text-xs font-bold text-gray-400">Rate/1k</span>
-                    <span className="text-lg font-black text-gray-900">₦{calculatePrice(Number(service.rate))}</span>
-                  </div>
-                </div>
-                
-                <h3 className="text-sm font-black text-gray-800 mb-6 line-clamp-2 leading-relaxed flex-1">
-                  {service.name}
-                </h3>
-                
-                <div className="grid grid-cols-2 gap-4 mb-8">
-                  <div className="p-3 bg-white rounded-2xl border border-gray-100">
-                    <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Min Order</p>
-                    <p className="text-xs font-black text-gray-900">{service.min}</p>
-                  </div>
-                  <div className="p-3 bg-white rounded-2xl border border-gray-100">
-                    <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Max Order</p>
-                    <p className="text-xs font-black text-gray-900">{service.max}</p>
-                  </div>
-                </div>
-
-                <button 
-                  onClick={() => setSelectedService(service)}
-                  className="w-full bg-white border border-gray-200 text-gray-700 font-black py-4 rounded-2xl text-xs group-hover:bg-blue-700 group-hover:text-white group-hover:border-blue-700 group-hover:shadow-lg group-hover:shadow-blue-200 transition-all flex items-center justify-center gap-2"
-                >
-                  <ShoppingCart className="w-4 h-4" />
-                  Place Order
-                </button>
-              </motion.div>
-            ))}
-          </div>
-        )}
       </div>
 
-      {/* Order Modal */}
-      {selectedService && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="bg-white rounded-[3rem] p-10 max-w-lg w-full shadow-2xl relative overflow-hidden"
-          >
-            {/* Background Decoration */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-16 -mt-16 blur-2xl" />
-            
-            <div className="relative z-10">
-              <div className="flex justify-between items-start mb-8">
-                <div>
-                  <h3 className="text-2xl font-black text-gray-900">New Order</h3>
-                  <p className="text-sm text-gray-500 font-medium">Complete your social booster order</p>
-                </div>
-                <button 
-                  onClick={() => setSelectedService(null)}
-                  className="p-3 bg-gray-50 text-gray-400 hover:text-gray-900 rounded-2xl transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {message.text && (
-                <div className={cn(
-                  "p-5 rounded-2xl mb-8 flex items-start gap-3",
-                  message.type === 'success' ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-red-50 text-red-700 border border-red-100"
-                )}>
-                  <p className="text-sm font-bold">{message.text}</p>
-                </div>
+      {/* Category Filter */}
+      <div className="flex overflow-x-auto pb-4 gap-3 no-scrollbar">
+        {CATEGORIES.map((cat) => {
+          const Icon = cat.icon;
+          const isActive = selectedCategory === cat.id;
+          return (
+            <button
+              key={cat.id}
+              onClick={() => setSelectedCategory(cat.id)}
+              className={cn(
+                "flex items-center gap-3 px-6 py-4 rounded-2xl font-black text-xs whitespace-nowrap transition-all border-2",
+                isActive 
+                  ? "bg-blue-700 border-blue-700 text-white shadow-lg shadow-blue-200 scale-105" 
+                  : "bg-white border-transparent text-gray-500 hover:border-gray-200 hover:text-gray-900"
               )}
+            >
+              <Icon className={cn("w-4 h-4", isActive ? "text-white" : "text-gray-400")} />
+              {cat.name}
+            </button>
+          );
+        })}
+      </div>
 
-              <div className="space-y-6">
-                  <div className="p-6 bg-blue-50 rounded-3xl border border-blue-100">
-                    <p className="text-[10px] font-black text-blue-700 uppercase tracking-widest mb-2">Service Selected</p>
-                    <p className="text-sm font-black text-blue-900 leading-relaxed mb-3">{selectedService.name}</p>
-                    <div className="flex items-center gap-2">
-                      <span className="px-2 py-1 bg-white rounded-lg text-[10px] font-black text-blue-700">₦{calculatePrice(Number(selectedService.rate))}/1k</span>
-                      <span className="px-2 py-1 bg-white rounded-lg text-[10px] font-black text-blue-700">Min: {selectedService.min}</span>
+      {/* Services Grid */}
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-32 gap-6">
+          <div className="relative">
+            <div className="w-20 h-20 border-4 border-blue-100 border-t-blue-700 rounded-full animate-spin" />
+            <Zap className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 text-blue-700 animate-pulse" />
+          </div>
+          <div className="text-center space-y-2">
+            <p className="text-xl font-black text-gray-900">Loading Premium Services</p>
+            <p className="text-sm font-medium text-gray-400">Fetching the best rates for you...</p>
+          </div>
+        </div>
+      ) : filteredServices.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <AnimatePresence mode="popLayout">
+            {filteredServices.map((service, index) => (
+              <motion.div 
+                key={service.service}
+                layout
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ delay: index * 0.05 }}
+                className="group bg-white border border-gray-100 rounded-[2.5rem] p-8 hover:border-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/10 transition-all relative overflow-hidden flex flex-col"
+              >
+                <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-full -mr-12 -mt-12 group-hover:bg-blue-100 transition-colors" />
+                
+                <div className="relative z-10 flex-1 flex flex-col">
+                  <div className="flex justify-between items-start mb-6">
+                    <div className="px-4 py-2 bg-blue-50 rounded-xl">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-blue-700">
+                        {service.category}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Rate/1k</p>
+                      <p className="text-2xl font-black text-gray-900">₦{calculatePrice(Number(service.rate))}</p>
+                    </div>
+                  </div>
+                  
+                  <h3 className="text-lg font-black text-gray-800 mb-6 line-clamp-2 leading-tight group-hover:text-blue-700 transition-colors">
+                    {service.name}
+                  </h3>
+                  
+                  <div className="grid grid-cols-2 gap-4 mb-8">
+                    <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 group-hover:bg-white transition-colors">
+                      <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Min Order</p>
+                      <p className="text-sm font-black text-gray-900">{service.min.toLocaleString()}</p>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 group-hover:bg-white transition-colors">
+                      <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Max Order</p>
+                      <p className="text-sm font-black text-gray-900">{service.max.toLocaleString()}</p>
                     </div>
                   </div>
 
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Target Link</label>
-                  <div className="relative">
-                    <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input 
-                      type="url"
-                      placeholder="https://instagram.com/p/..."
-                      value={link}
-                      onChange={(e) => setLink(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                    />
-                  </div>
+                  <button 
+                    onClick={() => setSelectedService(service)}
+                    className="w-full bg-gray-900 text-white font-black py-5 rounded-2xl text-sm hover:bg-blue-700 hover:shadow-xl hover:shadow-blue-200 transition-all active:scale-95 flex items-center justify-center gap-3"
+                  >
+                    <ShoppingCart className="w-5 h-5" />
+                    Place Order
+                  </button>
                 </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      ) : (
+        <div className="bg-white rounded-[3rem] p-20 text-center border border-dashed border-gray-200">
+          <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Search className="w-10 h-10 text-gray-300" />
+          </div>
+          <h3 className="text-2xl font-black text-gray-900 mb-2">No services found</h3>
+          <p className="text-gray-500 font-medium">Try adjusting your search or category filter.</p>
+          <button 
+            onClick={() => { setSearchTerm(''); setSelectedCategory('All'); }}
+            className="mt-8 text-blue-700 font-black text-sm hover:underline"
+          >
+            Clear all filters
+          </button>
+        </div>
+      )}
 
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Quantity</label>
-                  <div className="relative">
-                    <Plus className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input 
-                      type="number"
-                      placeholder={`Min: ${selectedService.min}, Max: ${selectedService.max}`}
-                      value={quantity}
-                      onChange={(e) => setQuantity(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                    />
-                  </div>
-                </div>
-
-                  <div className="pt-4 border-t border-gray-100">
-                  <div className="flex justify-between items-center mb-6">
-                    <span className="text-sm font-bold text-gray-500 uppercase tracking-widest">Total Price</span>
-                    <div className="text-right">
-                      <span className="text-3xl font-black text-gray-900">
-                        ₦{((calculatePrice(Number(selectedService.rate)) / 1000) * Number(quantity || 0)).toFixed(2)}
-                      </span>
+      {/* Order Modal */}
+      <AnimatePresence>
+        {selectedService && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedService(null)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white rounded-[3.5rem] p-10 max-w-lg w-full shadow-2xl relative overflow-hidden z-10"
+            >
+              <div className="absolute top-0 right-0 w-48 h-48 bg-blue-50 rounded-full -mr-24 -mt-24 blur-3xl" />
+              
+              <div className="relative z-10">
+                <div className="flex justify-between items-start mb-8">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 bg-blue-700 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200">
+                      <ShoppingCart className="w-7 h-7 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-black text-gray-900">New Order</h3>
+                      <p className="text-sm text-gray-500 font-medium">Boost your presence</p>
                     </div>
                   </div>
                   <button 
-                    onClick={handleOrder}
-                    disabled={ordering}
-                    className="w-full bg-blue-700 text-white py-5 rounded-2xl font-black text-sm shadow-xl shadow-blue-200 hover:scale-[1.02] transition-transform active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50"
+                    onClick={() => setSelectedService(null)}
+                    className="p-3 bg-gray-50 text-gray-400 hover:text-gray-900 rounded-2xl transition-colors"
                   >
-                    {ordering ? (
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        <ShoppingCart className="w-5 h-5" />
-                        Confirm & Pay
-                      </>
-                    )}
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
+
+                {message.text && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={cn(
+                      "p-5 rounded-2xl mb-8 flex items-start gap-3 border",
+                      message.type === 'success' ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-red-50 text-red-700 border-red-100"
+                    )}
+                  >
+                    <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                    <p className="text-sm font-bold">{message.text}</p>
+                  </motion.div>
+                )}
+
+                <div className="space-y-6">
+                  <div className="p-6 bg-gray-50 rounded-[2rem] border border-gray-100">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Service Details</p>
+                    <p className="text-sm font-black text-gray-900 leading-tight mb-4">{selectedService.name}</p>
+                    <div className="flex flex-wrap gap-2">
+                      <span className="px-3 py-1.5 bg-white rounded-xl text-[10px] font-black text-blue-700 border border-blue-100">₦{calculatePrice(Number(selectedService.rate))}/1k</span>
+                      <span className="px-3 py-1.5 bg-white rounded-xl text-[10px] font-black text-gray-600 border border-gray-100">Min: {selectedService.min}</span>
+                      <span className="px-3 py-1.5 bg-white rounded-xl text-[10px] font-black text-gray-600 border border-gray-100">Max: {selectedService.max}</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Target Link</label>
+                    <div className="relative group">
+                      <Globe className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-700 transition-colors" />
+                      <input 
+                        type="url"
+                        placeholder="https://instagram.com/p/..."
+                        value={link}
+                        onChange={(e) => setLink(e.target.value)}
+                        className="w-full bg-gray-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl pl-14 pr-6 py-4 text-sm font-bold outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Quantity</label>
+                    <div className="relative group">
+                      <Plus className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-700 transition-colors" />
+                      <input 
+                        type="number"
+                        placeholder={`Enter quantity (${selectedService.min} - ${selectedService.max})`}
+                        value={quantity}
+                        onChange={(e) => setQuantity(e.target.value)}
+                        className="w-full bg-gray-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl pl-14 pr-6 py-4 text-sm font-bold outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-6 border-t border-gray-100">
+                    <div className="flex justify-between items-center mb-8">
+                      <div>
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Payable</p>
+                        <p className="text-4xl font-black text-gray-900">
+                          ₦{((calculatePrice(Number(selectedService.rate)) / 1000) * Number(quantity || 0)).toFixed(2)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Est. Delivery</p>
+                        <p className="text-sm font-black text-blue-700">Instant - 24h</p>
+                      </div>
+                    </div>
+                    
+                    <button 
+                      onClick={handleOrder}
+                      disabled={ordering}
+                      className="w-full bg-blue-700 text-white py-6 rounded-2xl font-black text-sm shadow-2xl shadow-blue-200 hover:bg-blue-800 transition-all active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50"
+                    >
+                      {ordering ? (
+                        <Loader2 className="w-6 h-6 animate-spin" />
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-6 h-6" />
+                          CONFIRM & PAY NOW
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          </motion.div>
-        </div>
-      )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* PIN Verification Modal */}
       <PinModal 

@@ -112,7 +112,7 @@ export default function Signup() {
       // Send Welcome Email
       emailService.sendWelcomeEmail(email.toLowerCase(), firstName);
 
-      showToast('success', 'Account Created!', 'Welcome to Oplug! Please verify your phone number to continue.');
+      showToast('success', 'Account Created!', 'Welcome to Oplug! Please verify your email to continue.');
       navigate('/verify-phone');
     } catch (err: any) {
       const friendlyMsg = getFriendlyErrorMessage(err);

@@ -116,6 +116,83 @@ app.get('/api/auth/check-username/:username', async (req, res) => {
   }
 });
 
+// --- Email OTP ---
+app.post('/api/auth/send-otp', async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ message: 'Email is required' });
+  if (!mailjet) return res.status(500).json({ message: 'Email service not configured' });
+
+  try {
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    await adminDb.collection('otps').doc(email).set({
+      otp,
+      expiresAt,
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    await mailjet.post('send', { version: 'v3.1' }).request({
+      Messages: [
+        {
+          From: {
+            Email: 'noreply@oplug.com.ng', // Ensure this is a verified sender in Mailjet
+            Name: 'Oplug'
+          },
+          To: [{ Email: email }],
+          Subject: 'Your Verification Code - Oplug',
+          HTMLPart: `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+              <h2 style="color: #1d4ed8; text-align: center;">Oplug Verification</h2>
+              <p>Hello,</p>
+              <p>Your verification code is:</p>
+              <div style="background: #f3f4f6; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 10px; color: #111827; border-radius: 8px; margin: 20px 0;">
+                ${otp}
+              </div>
+              <p>This code will expire in 10 minutes. If you didn't request this, please ignore this email.</p>
+              <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+              <p style="font-size: 12px; color: #6b7280; text-align: center;">&copy; ${new Date().getFullYear()} Oplug. All rights reserved.</p>
+            </div>
+          `
+        }
+      ]
+    });
+
+    res.json({ status: 'success', message: 'OTP sent successfully' });
+  } catch (error: any) {
+    console.error('Send OTP Error:', error);
+    res.status(500).json({ message: 'Failed to send OTP' });
+  }
+});
+
+app.post('/api/auth/verify-otp', async (req, res) => {
+  const { email, otp } = req.body;
+  if (!email || !otp) return res.status(400).json({ message: 'Email and OTP are required' });
+
+  try {
+    const otpDoc = await adminDb.collection('otps').doc(email).get();
+    if (!otpDoc.exists) return res.status(400).json({ message: 'Invalid or expired OTP' });
+
+    const data = otpDoc.data();
+    if (data?.otp !== otp) return res.status(400).json({ message: 'Invalid OTP' });
+    if (Date.now() > data?.expiresAt) return res.status(400).json({ message: 'OTP has expired' });
+
+    // Mark as verified in users collection
+    const userSnapshot = await adminDb.collection('users').where('email', '==', email).limit(1).get();
+    if (!userSnapshot.empty) {
+      await userSnapshot.docs[0].ref.update({ isPhoneVerified: true }); // Keeping field name for compatibility
+    }
+
+    // Delete OTP after successful verification
+    await otpDoc.ref.delete();
+
+    res.json({ status: 'success', message: 'Verification successful' });
+  } catch (error: any) {
+    console.error('Verify OTP Error:', error);
+    res.status(500).json({ message: 'Verification failed' });
+  }
+});
+
 // --- Inlomax API Proxy (VTU) ---
 const INLOMAX_BASE_URL = 'https://inlomax.com/api';
 
@@ -354,15 +431,15 @@ app.post('/api/funding/webhook', async (req, res) => {
             break;
           case 'cable':
             endpoint = '/subcable';
-            payload = { serviceID: planId, smartcard: phone };
+            payload = { serviceID: planId, iucNum: phone };
             break;
           case 'electricity':
             endpoint = '/payelectric';
-            payload = { serviceID: planId, meter: phone, type: meterType };
+            payload = { serviceID: planId, meterNum: phone, meterType: meterType, amount: metadata.amount };
             break;
           case 'education':
             endpoint = '/education';
-            payload = { serviceID: planId, phone: phone };
+            payload = { serviceID: planId, quantity: quantity || 1 };
             break;
           case 'smm':
             // SMM uses OgaViral
