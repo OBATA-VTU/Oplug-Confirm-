@@ -168,7 +168,7 @@ export default function CableSubscription() {
             type: 'Cable Subscription',
             amount: plan?.displayAmount || 0,
             status: 'success',
-            description: `${(cable as string).toUpperCase()} ${plan?.cablePlan} to ${iuc} (${customerName})`,
+            description: `${(cable || '').toString().toUpperCase()} ${plan?.cablePlan} to ${iuc} (${customerName})`,
             reference: response.reference || `CABLE-${Date.now()}`,
             createdAt: serverTimestamp()
           });
@@ -275,7 +275,7 @@ export default function CableSubscription() {
                     <option value="">Choose a cable provider</option>
                     {cables.map((c: string) => (
                       <option key={c} value={c}>
-                        {c.toUpperCase()}
+                        {String(c).toUpperCase()}
                       </option>
                     ))}
                   </select>

@@ -95,6 +95,9 @@ export default function Home() {
               </Link>
             ) : (
               <div className="flex flex-col gap-4">
+                <Link to="/quick-purchase" onClick={() => setIsMenuOpen(false)} className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-bold text-center">
+                  Quick Purchase
+                </Link>
                 <Link to="/login" onClick={() => setIsMenuOpen(false)} className="text-center font-bold text-blue-700 py-2">Login</Link>
                 <Link to="/signup" onClick={() => setIsMenuOpen(false)} className="bg-blue-700 text-white px-8 py-4 rounded-2xl font-bold text-center">
                   Create Account
@@ -169,8 +172,8 @@ export default function Home() {
               >
                 <div className="relative min-h-[400px] flex items-center justify-center">
                   <img 
-                    src={settings?.heroImage || "https://images.unsplash.com/photo-1556157382-97dee2dcb756?auto=format&fit=crop&q=80&w=1000"} 
-                    alt="Man using phone" 
+                    src={settings?.heroImage || "https://images.unsplash.com/photo-1633356122544-f134324a6cee?auto=format&fit=crop&q=80&w=1000"} 
+                    alt="Digital Services Illustration" 
                     className="w-full max-w-lg mx-auto drop-shadow-2xl rounded-[3rem]"
                     referrerPolicy="no-referrer"
                   />
@@ -195,59 +198,62 @@ export default function Home() {
       </section>
 
       {/* Quick Purchase Section */}
-      <section className="py-32 bg-white" id="quick-purchase">
-        <div className="container mx-auto px-6">
-          <div className="flex flex-col lg:flex-row items-center gap-16">
-            <div className="flex-1 space-y-8">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 text-emerald-700 text-sm font-bold">
-                <ZapIcon className="w-4 h-4" />
-                No Account Needed
-              </div>
-              <h2 className="text-4xl lg:text-6xl font-black leading-tight tracking-tighter">
-                Quick Purchase <br />
-                <span className="text-emerald-600">Buy in Seconds.</span>
-              </h2>
-              <p className="text-lg text-gray-500 leading-relaxed max-w-md">
-                Don't want to create an account? Use our quick purchase feature to buy data or airtime instantly. A small 2% processing fee applies.
-              </p>
-              <div className="flex items-center gap-4">
-                <div className="flex -space-x-3">
-                  {[1,2,3,4].map(i => (
-                    <img key={i} src={`https://i.pravatar.cc/100?u=${i}`} className="w-10 h-10 rounded-full border-4 border-white shadow-sm" alt="User" />
-                  ))}
+      {!user && (
+        <section className="py-32 bg-white" id="quick-purchase">
+          <div className="container mx-auto px-6">
+            <div className="flex flex-col lg:flex-row items-center gap-16">
+              <div className="flex-1 space-y-8">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 text-emerald-700 text-sm font-bold">
+                  <ZapIcon className="w-4 h-4" />
+                  No Account Needed
                 </div>
-                <p className="text-sm font-bold text-gray-400">Join 500+ daily quick buyers</p>
+                <h2 className="text-4xl lg:text-6xl font-black leading-tight tracking-tighter">
+                  Quick Purchase <br />
+                  <span className="text-emerald-600">Buy in Seconds.</span>
+                </h2>
+                <p className="text-lg text-gray-500 leading-relaxed max-w-md">
+                  Don't want to create an account? Use our quick purchase feature to buy data or airtime instantly. A small 2% processing fee applies.
+                </p>
+                <div className="flex items-center gap-4">
+                  <div className="flex -space-x-3">
+                    {[1,2,3,4].map(i => (
+                      <img key={i} src={`https://i.pravatar.cc/100?u=${i}`} className="w-10 h-10 rounded-full border-4 border-white shadow-sm" alt="User" />
+                    ))}
+                  </div>
+                  <p className="text-sm font-bold text-gray-400">Join 500+ daily quick buyers</p>
+                </div>
+                <Link to="/quick-purchase" className="inline-flex items-center gap-3 bg-emerald-600 text-white px-10 py-5 rounded-2xl font-bold text-lg hover:bg-emerald-700 transition-all shadow-2xl shadow-emerald-100">
+                  Start Quick Purchase
+                  <ArrowRight className="w-5 h-5" />
+                </Link>
               </div>
-              <Link to="/quick-purchase" className="inline-flex items-center gap-3 bg-emerald-600 text-white px-10 py-5 rounded-2xl font-bold text-lg hover:bg-emerald-700 transition-all shadow-2xl shadow-emerald-100">
-                Start Quick Purchase
-                <ArrowRight className="w-5 h-5" />
-              </Link>
-            </div>
 
-            <div className="flex-1 w-full max-w-xl relative">
-              <motion.div
-                animate={{ 
-                  y: [0, -20, 0],
-                  rotate: [0, 2, 0]
-                }}
-                transition={{ 
-                  duration: 5,
-                  repeat: Infinity,
-                  ease: "easeInOut"
-                }}
-                className="relative z-10"
-              >
-                <img 
-                  src="https://illustrations.popsy.co/blue/online-shopping.svg" 
-                  alt="Quick Purchase" 
-                  className="w-full h-auto"
-                />
-              </motion.div>
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] bg-emerald-50 rounded-full blur-3xl -z-10 opacity-50" />
+              <div className="flex-1 w-full max-w-xl relative">
+                <motion.div
+                  animate={{ 
+                    y: [0, -20, 0],
+                    rotate: [0, 2, 0]
+                  }}
+                  transition={{ 
+                    duration: 5,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                  className="relative z-10"
+                >
+                  <img 
+                    src="https://images.unsplash.com/photo-1563013544-824ae1b704d3?auto=format&fit=crop&q=80&w=1000" 
+                    alt="Quick Purchase" 
+                    className="w-full h-auto rounded-[2rem] shadow-2xl"
+                    referrerPolicy="no-referrer"
+                  />
+                </motion.div>
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] bg-emerald-50 rounded-full blur-3xl -z-10 opacity-50" />
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Features Section */}
       <section className="py-32 bg-gray-50/50">
@@ -264,21 +270,21 @@ export default function Home() {
                 desc: 'Fund your wallet instantly via Bank Transfer, USSD, or Card.',
                 icon: Landmark,
                 color: 'bg-blue-50 text-blue-700',
-                img: 'https://illustrations.popsy.co/blue/payment-processed.svg'
+                img: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=1000'
               },
               { 
                 title: 'Automated Delivery', 
                 desc: 'All services are delivered instantly 24/7 without manual intervention.',
                 icon: Zap,
                 color: 'bg-emerald-50 text-emerald-700',
-                img: 'https://illustrations.popsy.co/blue/success.svg'
+                img: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=1000'
               },
               { 
                 title: 'Secure & Reliable', 
                 desc: 'Your data and transactions are protected with bank-grade security.',
                 icon: ShieldCheck,
                 color: 'bg-indigo-50 text-indigo-700',
-                img: 'https://illustrations.popsy.co/blue/lock.svg'
+                img: 'https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&q=80&w=1000'
               }
             ].map((feature, i) => (
               <motion.div
@@ -292,14 +298,16 @@ export default function Home() {
                 <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform", feature.color)}>
                   <feature.icon className="w-8 h-8" />
                 </div>
+                <div className="mb-6 overflow-hidden rounded-2xl h-40">
+                  <img 
+                    src={feature.img} 
+                    alt={feature.title} 
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
                 <h3 className="text-2xl font-black mb-4">{feature.title}</h3>
                 <p className="text-gray-500 mb-8 leading-relaxed">{feature.desc}</p>
-                <img 
-                  src={feature.img} 
-                  alt={feature.title} 
-                  className="w-full h-40 object-contain"
-                  referrerPolicy="no-referrer"
-                />
               </motion.div>
             ))}
           </div>
@@ -358,7 +366,7 @@ export default function Home() {
           <div className="flex flex-col lg:flex-row items-center gap-16">
             <div className="flex-1">
               <img 
-                src={settings?.fastDeliveryImage || "https://illustrations.popsy.co/blue/man-on-rocket.svg"} 
+                src={settings?.fastDeliveryImage || "https://images.unsplash.com/photo-1566576721346-d4a3b4eaeb55?auto=format&fit=crop&q=80&w=1000"} 
                 alt="Fast Delivery" 
                 className="w-full max-w-lg mx-auto drop-shadow-xl"
                 referrerPolicy="no-referrer"
@@ -390,7 +398,7 @@ export default function Home() {
           <div className="flex flex-col lg:flex-row-reverse items-center gap-16">
             <div className="flex-1">
               <img 
-                src={settings?.resellerImage || "https://illustrations.popsy.co/blue/shaking-hands.svg"} 
+                src={settings?.resellerImage || "https://images.unsplash.com/photo-1556742044-3c52d6e88c62?auto=format&fit=crop&q=80&w=1000"} 
                 alt="Partnership" 
                 className="w-full max-w-lg mx-auto drop-shadow-xl"
                 referrerPolicy="no-referrer"
@@ -429,7 +437,7 @@ export default function Home() {
           <div className="flex flex-col lg:flex-row items-center gap-16">
             <div className="flex-1">
               <img 
-                src={settings?.developerImage || "https://illustrations.popsy.co/white/web-design.svg"} 
+                src={settings?.developerImage || "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=1000"} 
                 alt="API Integration" 
                 className="w-full max-w-lg mx-auto drop-shadow-[0_0_30px_rgba(255,255,255,0.1)]"
                 referrerPolicy="no-referrer"
@@ -470,7 +478,7 @@ export default function Home() {
           <div className="flex flex-col lg:flex-row-reverse items-center gap-16">
             <div className="flex-1">
               <img 
-                src={settings?.fundingImage || "https://illustrations.popsy.co/blue/payment-processed.svg"} 
+                src={settings?.fundingImage || "https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&q=80&w=1000"} 
                 alt="Easy Funding" 
                 className="w-full max-w-lg mx-auto drop-shadow-xl"
                 referrerPolicy="no-referrer"
@@ -556,7 +564,7 @@ export default function Home() {
             </div>
             <div className="flex-1 relative z-10">
               <img 
-                src={settings?.supportImage || "https://illustrations.popsy.co/blue/customer-support.svg"} 
+                src={settings?.supportImage || "https://images.unsplash.com/photo-1534536281715-e28d76689b4d?auto=format&fit=crop&q=80&w=1000"} 
                 alt="Support" 
                 className="w-full max-w-md mx-auto drop-shadow-2xl"
                 referrerPolicy="no-referrer"

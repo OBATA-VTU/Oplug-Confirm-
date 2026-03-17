@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'motion/react';
 export default function QuickPurchaseForm() {
   const [type, setType] = useState<'airtime' | 'data'>('data');
   const [network, setNetwork] = useState('');
+  const [dataType, setDataType] = useState('');
   const [plan, setPlan] = useState<any>(null);
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -36,9 +37,18 @@ export default function QuickPurchaseForm() {
     { id: '9mobile', name: '9mobile', color: 'bg-emerald-800' },
   ];
 
+  const dataTypes = services && network ? Array.from(new Set(
+    (services.dataPlans || [])
+      .filter((p: any) => p.network.toLowerCase().includes(network.toLowerCase()))
+      .map((p: any) => p.dataType)
+  )) : [];
+
   const filteredPlans = services ? (
     type === 'data' 
-      ? (services.dataPlans || []).filter((p: any) => p.network.toLowerCase().includes(network.toLowerCase()))
+      ? (services.dataPlans || []).filter((p: any) => 
+          p.network.toLowerCase().includes(network.toLowerCase()) && 
+          (!dataType || p.dataType === dataType)
+        )
       : (services.airtimePlans || []).filter((p: any) => p.network.toLowerCase().includes(network.toLowerCase()))
   ) : [];
 
@@ -124,7 +134,11 @@ export default function QuickPurchaseForm() {
             {networks.map((net) => (
               <button
                 key={net.id}
-                onClick={() => { setNetwork(net.name); setPlan(null); }}
+                onClick={() => { 
+                  setNetwork(net.name); 
+                  setDataType('');
+                  setPlan(null); 
+                }}
                 className={cn(
                   "aspect-square rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-2 group",
                   network === net.name ? "border-blue-600 bg-blue-50" : "border-gray-100 bg-gray-50 hover:border-gray-200"
@@ -136,6 +150,27 @@ export default function QuickPurchaseForm() {
             ))}
           </div>
         </div>
+
+        {/* Data Type Selection */}
+        {type === 'data' && network && (
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Data Type</label>
+            <div className="flex flex-wrap gap-2">
+              {dataTypes.map((t: any) => (
+                <button
+                  key={t}
+                  onClick={() => { setDataType(t); setPlan(null); }}
+                  className={cn(
+                    "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                    dataType === t ? "bg-blue-700 text-white" : "bg-gray-50 text-gray-500 hover:bg-gray-100"
+                  )}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Plan Selection */}
         <div className="space-y-3">
@@ -151,7 +186,7 @@ export default function QuickPurchaseForm() {
             <option value="">Choose a plan...</option>
             {filteredPlans.map((p: any, index: number) => (
               <option key={`${p.serviceID}-${index}`} value={p.serviceID}>
-                {p.name} - ₦{p.amount}
+                {p.name || p.dataPlan} - ₦{p.amount || p.displayAmount} {p.validity ? `(${p.validity})` : ''}
               </option>
             ))}
           </select>

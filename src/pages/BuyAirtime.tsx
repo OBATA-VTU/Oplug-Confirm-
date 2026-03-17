@@ -131,7 +131,7 @@ export default function BuyAirtime() {
             amount: finalAmount,
             profit: profit,
             status: 'success',
-            description: `${network.toUpperCase()} ₦${amount} Airtime to ${phone}`,
+            description: `${(network || '').toString().toUpperCase()} ₦${amount} Airtime to ${phone}`,
             reference: response.reference || `AIRTIME-${Date.now()}`,
             createdAt: serverTimestamp(),
             service: 'airtime'
@@ -238,7 +238,7 @@ export default function BuyAirtime() {
                     <option value="">Choose a network provider</option>
                     {services.map((s, index) => (
                       <option key={`${s.serviceID}-${index}`} value={s.serviceID}>
-                        {s.network.toUpperCase()}
+                        {(s.network || '').toString().toUpperCase()}
                       </option>
                     ))}
                   </select>

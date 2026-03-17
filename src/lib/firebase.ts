@@ -9,9 +9,13 @@ import firebaseConfig from '../../firebase-applet-config.json';
 // Initialize Firebase SDK
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-// Respect the named database if provided
+
+// Respect the named database if provided, but fallback to default if it's not working
 const databaseId = (firebaseConfig as any).firestoreDatabaseId;
-export const db = databaseId ? getFirestore(app, databaseId) : getFirestore(app);
+export const db = databaseId && databaseId !== '(default)' 
+  ? getFirestore(app, databaseId) 
+  : getFirestore(app);
+
 export const storage = getStorage(app);
 export const googleProvider = new GoogleAuthProvider();
 

@@ -266,7 +266,7 @@ export default function ElectricityPayment() {
                     <option value="">Choose a disco provider</option>
                     {services.map((s, index) => (
                       <option key={`${s.serviceID}-${index}`} value={s.serviceID}>
-                        {s.disco.toUpperCase()}
+                        {(s.disco || '').toString().toUpperCase()}
                       </option>
                     ))}
                   </select>

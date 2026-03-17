@@ -41,7 +41,6 @@ import Logo from './Logo';
 
 const navItems = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-  { name: 'Quick Purchase', path: '/quick-purchase', icon: Zap },
   { name: 'All Services', path: '/services', icon: Grid },
   { name: 'Fund Wallet', path: '/fund', icon: Wallet },
   { name: 'Buy Airtime', path: '/airtime', icon: Phone },

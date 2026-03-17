@@ -18,12 +18,12 @@ export default function AdminSettings() {
     firstDepositBonus: 0,
     minFundingAmount: 100,
     fundingFee: 50,
-    heroImage: 'https://illustrations.popsy.co/blue/woman-with-smartphone.svg',
-    fastDeliveryImage: 'https://illustrations.popsy.co/blue/man-on-rocket.svg',
-    resellerImage: 'https://illustrations.popsy.co/blue/shaking-hands.svg',
-    developerImage: 'https://illustrations.popsy.co/white/web-design.svg',
-    fundingImage: 'https://illustrations.popsy.co/blue/payment-processed.svg',
-    supportImage: 'https://illustrations.popsy.co/blue/customer-support.svg'
+    heroImage: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?auto=format&fit=crop&q=80&w=1000',
+    fastDeliveryImage: 'https://images.unsplash.com/photo-1566576721346-d4a3b4eaeb55?auto=format&fit=crop&q=80&w=1000',
+    resellerImage: 'https://images.unsplash.com/photo-1556742044-3c52d6e88c62?auto=format&fit=crop&q=80&w=1000',
+    developerImage: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=1000',
+    fundingImage: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&q=80&w=1000',
+    supportImage: 'https://images.unsplash.com/photo-1534536281715-e28d76689b4d?auto=format&fit=crop&q=80&w=1000'
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

@@ -153,7 +153,7 @@ export default function BuyData() {
             amount: resellerPrice,
             profit: profit,
             status: 'success',
-            description: `${network.toUpperCase()} ${plan?.dataPlan} to ${phone}`,
+            description: `${(network || '').toString().toUpperCase()} ${plan?.dataPlan} to ${phone}`,
             reference: response.reference || `DATA-${Date.now()}`,
             createdAt: serverTimestamp(),
             service: 'data'
@@ -262,8 +262,8 @@ export default function BuyData() {
                   className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-5 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none cursor-pointer"
                 >
                   <option value="">Select Network Provider</option>
-                  {networks.map((n: any) => (
-                    <option key={n} value={n}>{(n as string).toUpperCase()}</option>
+                  {networks.map((n: any, index: number) => (
+                    <option key={`${String(n)}-${index}`} value={String(n)}>{String(n).toUpperCase()}</option>
                   ))}
                 </select>
               </div>

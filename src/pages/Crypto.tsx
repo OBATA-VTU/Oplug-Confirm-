@@ -21,13 +21,39 @@ export default function Crypto() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [estimate, setEstimate] = useState<any>(null);
+  const [minAmount, setMinAmount] = useState<number>(0);
+
+  useEffect(() => {
+    const fetchMinAmount = async () => {
+      if (selectedCurrency) {
+        try {
+          const res = await nowpaymentsService.getMinAmount('usd', selectedCurrency);
+          setMinAmount(res.min_amount || 0);
+        } catch (err) {
+          console.error('Failed to fetch min amount:', err);
+        }
+      }
+    };
+    fetchMinAmount();
+  }, [selectedCurrency]);
 
   useEffect(() => {
     const fetchCurrencies = async () => {
       try {
         const res = await nowpaymentsService.getCurrencies();
-        if (res.currencies) {
-          setCurrencies(res.currencies);
+        if (res.currencies && Array.isArray(res.currencies)) {
+          // Ensure we only have unique strings
+          const formattedCurrencies = Array.from(new Set(res.currencies.map((c: any) => {
+            if (typeof c === 'string') return c;
+            if (c && typeof c === 'object') return c.ticker || c.code || String(c);
+            return null;
+          }).filter(v => v && typeof v === 'string'))) as string[];
+          
+          setCurrencies(formattedCurrencies);
+          // Set a default if current selection is not in the new list
+          if (formattedCurrencies.length > 0 && !formattedCurrencies.includes(selectedCurrency)) {
+            setSelectedCurrency(formattedCurrencies[0]);
+          }
         }
       } catch (err) {
         console.error('Failed to fetch currencies:', err);
@@ -39,25 +65,42 @@ export default function Crypto() {
   }, []);
 
   const handleEstimate = async () => {
-    if (!amount || isNaN(Number(amount))) return;
+    const numAmount = Number(amount);
+    if (!amount || isNaN(numAmount) || numAmount <= 0 || !selectedCurrency) {
+      setEstimate(null);
+      return;
+    }
+    
     try {
-      const res = await nowpaymentsService.getEstimate(Number(amount), 'usd', selectedCurrency);
+      const res = await nowpaymentsService.getEstimate(numAmount, 'usd', selectedCurrency);
       setEstimate(res);
     } catch (err) {
       console.error('Estimate failed:', err);
+      setEstimate(null);
     }
   };
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (amount && selectedCurrency) handleEstimate();
+      const numAmount = Number(amount);
+      if (numAmount > 0 && selectedCurrency) {
+        handleEstimate();
+      } else {
+        setEstimate(null);
+      }
     }, 500);
     return () => clearTimeout(timer);
   }, [amount, selectedCurrency]);
 
   const handleAction = async () => {
-    if (!amount || Number(amount) <= 0) {
+    const numAmount = Number(amount);
+    if (!amount || numAmount <= 0) {
       setError('Please enter a valid amount');
+      return;
+    }
+
+    if (numAmount < minAmount) {
+      setError(`Minimum amount for ${selectedCurrency.toUpperCase()} is $${minAmount}`);
       return;
     }
 
@@ -71,7 +114,7 @@ export default function Crypto() {
           price_amount: Number(amount),
           price_currency: 'usd',
           pay_currency: selectedCurrency,
-          order_id: `${activeTab.toUpperCase()}_${Date.now()}`,
+          order_id: `${(activeTab || 'fund').toString().toUpperCase()}_${Date.now()}`,
           order_description: `${activeTab === 'fund' ? 'Wallet Funding' : 'Crypto Sale'} via ${selectedCurrency}`,
           success_url: `${window.location.origin}/dashboard`,
           cancel_url: `${window.location.origin}/crypto`
@@ -80,7 +123,7 @@ export default function Crypto() {
         if (res.invoice_url || res.payment_url) {
           window.location.href = res.invoice_url || res.payment_url;
         } else {
-          setSuccess(`Please send exactly ${res.pay_amount} ${res.pay_currency.toUpperCase()} to: ${res.pay_address}`);
+          setSuccess(`Please send exactly ${res.pay_amount} ${(res.pay_currency || selectedCurrency || '').toString().toUpperCase()} to: ${res.pay_address}`);
         }
       } else if (activeTab === 'buy') {
         // Buy Crypto: Deduct Naira balance, send Crypto to user
@@ -173,8 +216,8 @@ export default function Crypto() {
                 {fetchingCurrencies ? (
                   <option>Loading currencies...</option>
                 ) : (
-                  currencies.map(curr => (
-                    <option key={curr} value={curr}>{curr.toUpperCase()}</option>
+                  currencies.map((curr, index) => (
+                    <option key={`${String(curr)}-${index}`} value={String(curr)}>{String(curr).toUpperCase()}</option>
                   ))
                 )}
               </select>
@@ -184,11 +227,11 @@ export default function Crypto() {
               <div className="p-6 bg-blue-50 rounded-3xl border border-blue-100 space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-bold text-blue-900/60">You will pay</span>
-                  <span className="text-sm font-black text-blue-900">{estimate.estimated_amount} {selectedCurrency.toUpperCase()}</span>
+                  <span className="text-sm font-black text-blue-900">{estimate.estimated_amount} {(selectedCurrency || '').toString().toUpperCase()}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-bold text-blue-900/60">Exchange Rate</span>
-                  <span className="text-[10px] font-black text-blue-700">1 USD ≈ {(estimate.estimated_amount / Number(amount)).toFixed(8)} {selectedCurrency.toUpperCase()}</span>
+                  <span className="text-[10px] font-black text-blue-700">1 USD ≈ {(estimate.estimated_amount / Number(amount)).toFixed(8)} {(selectedCurrency || '').toString().toUpperCase()}</span>
                 </div>
               </div>
             )}

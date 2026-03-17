@@ -40,7 +40,7 @@ export default function Contact() {
             <div className="space-y-12">
               <div className="relative">
                 <img 
-                  src={content?.heroImage || "https://illustrations.popsy.co/blue/customer-support.svg"} 
+                  src={content?.heroImage || "https://images.unsplash.com/photo-1534536281715-e28d76689b4d?auto=format&fit=crop&q=80&w=1000"} 
                   alt="Contact Us" 
                   className="w-full max-w-md mx-auto"
                   referrerPolicy="no-referrer"

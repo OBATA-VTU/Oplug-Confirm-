@@ -12,19 +12,30 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 export default function QuickPurchase() {
-  const { user, profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'data' | 'airtime' | 'cable' | 'electricity' | 'education' | 'smm'>('data');
   const [network, setNetwork] = useState('');
   const [plan, setPlan] = useState<any>(null);
   const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState(profile?.email || '');
+  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [services, setServices] = useState<any>(null);
   const [smmServices, setSmmServices] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate('/dashboard');
+    }
+  }, [user, authLoading, navigate]);
+
+  useEffect(() => {
+    if (profile?.email) {
+      setEmail(profile.email);
+    }
+  }, [profile]);
   useEffect(() => {
     const fetchServices = async () => {
       try {

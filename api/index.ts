@@ -3,28 +3,70 @@ import dotenv from 'dotenv';
 import axios from 'axios';
 import Mailjet from 'node-mailjet';
 import admin from 'firebase-admin';
-import firebaseConfig from '../firebase-applet-config.json' assert { type: 'json' };
+import { readFileSync } from 'fs';
+import path from 'path';
 
 dotenv.config();
 
-// Initialize Firebase Admin
-if (!admin.apps.length) {
-  admin.initializeApp({
-    projectId: firebaseConfig.projectId,
-  });
+// Load Firebase configuration
+let firebaseConfig: any;
+try {
+  const configPath = path.resolve(process.cwd(), 'firebase-applet-config.json');
+  firebaseConfig = JSON.parse(readFileSync(configPath, 'utf8'));
+} catch (error) {
+  console.error('Error loading firebase-applet-config.json:', error);
+  firebaseConfig = {};
 }
-const adminDb = admin.firestore();
+
+// Initialize Firebase Admin
+if (!admin.apps.length && firebaseConfig.projectId) {
+  try {
+    admin.initializeApp({
+      projectId: firebaseConfig.projectId,
+    });
+  } catch (error) {
+    console.error('Error initializing Firebase Admin:', error);
+  }
+}
+
+const databaseId = firebaseConfig.firestoreDatabaseId;
+const adminDb = databaseId && databaseId !== '(default)' 
+  ? admin.firestore(databaseId) 
+  : admin.firestore();
 
 export const app = express();
 app.use(express.json());
 
-const mailjet = Mailjet.apiConnect(
-  process.env.MAILJET_API_KEY || '',
-  process.env.MAILJET_SECRET_KEY || ''
-);
+const mailjet = process.env.MAILJET_API_KEY && process.env.MAILJET_SECRET_KEY
+  ? new Mailjet({
+      apiKey: process.env.MAILJET_API_KEY,
+      apiSecret: process.env.MAILJET_SECRET_KEY
+    })
+  : null;
 
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', time: new Date().toISOString() });
+app.get('/api/health', async (req, res) => {
+  try {
+    // Check if settings exist, if not create them
+    const settingsRef = adminDb.collection('settings').doc('general');
+    const settingsSnap = await settingsRef.get();
+    if (!settingsSnap.exists) {
+      await settingsRef.set({
+        siteName: 'Oplug',
+        siteDescription: 'Fastest VTU Platform in Nigeria',
+        announcement: 'Welcome to Oplug! Buy data and airtime at the cheapest rates.',
+        referralBonus: 50,
+        resellerUpgradeFee: 2000,
+        smartUserPackageName: 'Smart User',
+        resellerPackageName: 'Reseller',
+        heroImage: 'https://images.unsplash.com/photo-1556157382-97dee2dcb756?auto=format&fit=crop&q=80&w=1000'
+      });
+      console.log('Default settings initialized');
+    }
+    res.json({ status: 'ok', time: new Date().toISOString(), database: databaseId || 'default' });
+  } catch (error: any) {
+    console.error('Health check error:', error);
+    res.status(500).json({ status: 'error', message: error.message });
+  }
 });
 
 app.get('/api/auth/check-username/:username', async (req, res) => {
@@ -308,6 +350,19 @@ app.get('/api/crypto/status', async (req, res) => {
 app.get('/api/crypto/currencies', async (req, res) => {
   try {
     const response = await axios.get(`${NOWPAYMENTS_BASE_URL}/currencies?fixed_rate=true`, {
+      headers: { 'x-api-key': process.env.NOWPAYMENTS_API_KEY || process.env.VITE_NOWPAYMENTS_API_KEY }
+    });
+    res.json(response.data);
+  } catch (error: any) {
+    res.status(error.response?.status || 500).json(error.response?.data || { message: 'NOWPayments API Error' });
+  }
+});
+
+app.get('/api/crypto/min-amount', async (req, res) => {
+  try {
+    const { currency_from, currency_to } = req.query;
+    const response = await axios.get(`${NOWPAYMENTS_BASE_URL}/min-amount`, {
+      params: { currency_from, currency_to },
       headers: { 'x-api-key': process.env.NOWPAYMENTS_API_KEY || process.env.VITE_NOWPAYMENTS_API_KEY }
     });
     res.json(response.data);

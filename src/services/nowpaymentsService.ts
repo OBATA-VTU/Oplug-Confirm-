@@ -54,5 +54,13 @@ export const nowpaymentsService = {
       params: { amount, currency_from: from, currency_to: to }
     });
     return response.data;
+  },
+  
+  // Get minimum payment amount
+  getMinAmount: async (from: string, to: string) => {
+    const response = await axios.get(`/api/crypto/min-amount`, {
+      params: { currency_from: from, currency_to: to }
+    });
+    return response.data;
   }
 };
