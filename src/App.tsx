@@ -77,10 +77,6 @@ function ProtectedRoute({ children, adminOnly = false }: { children: React.React
   
   if (!user) return <Navigate to="/login" />;
   
-  if (!profile?.isPhoneVerified && location.pathname !== '/verify-phone') {
-    return <Navigate to="/verify-phone" />;
-  }
-  
   if (adminOnly && !profile?.isAdmin) {
     return <Navigate to="/dashboard" />;
   }

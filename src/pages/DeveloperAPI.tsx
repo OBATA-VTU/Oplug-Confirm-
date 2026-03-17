@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Code, Key, Globe, Copy, CheckCircle2, RefreshCw, ArrowRight } from 'lucide-react';
+import { Code, Key, Globe, Copy, CheckCircle2, RefreshCw, ArrowRight, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -75,6 +75,17 @@ export default function DeveloperAPI() {
       )}
 
       <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100 space-y-8">
+        {(!profile?.nin || !profile?.bvn) && (
+          <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+            <div className="space-y-1">
+              <p className="text-xs font-black text-amber-900 uppercase tracking-wider">Verification Required</p>
+              <p className="text-[10px] text-amber-700 font-bold leading-relaxed">
+                NIN and BVN verification is required to use the API for transactions. Please update your <Link to="/profile/personal-info" className="underline">Personal Information</Link>.
+              </p>
+            </div>
+          </div>
+        )}
         {!apiKey ? (
           <div className="text-center py-12 space-y-6">
             <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto">

@@ -78,6 +78,13 @@ export default function Profile() {
           path: '/profile/personal-info',
           color: 'bg-blue-50 text-blue-700'
         },
+        ...(!profile?.isPhoneVerified ? [{
+          name: 'Verify Account',
+          description: 'Verify your email to secure your account',
+          icon: ShieldCheck,
+          path: '/verify-phone',
+          color: 'bg-amber-50 text-amber-700'
+        }] : []),
         { 
           name: 'Security & Password', 
           description: 'Change your password and secure account',
@@ -166,9 +173,14 @@ export default function Profile() {
               <span className="px-4 py-1.5 bg-blue-50 text-blue-700 rounded-full text-[10px] font-black uppercase tracking-widest border border-blue-100">
                 {profile?.role || 'Smart User'}
               </span>
-              <span className="px-4 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-100 flex items-center gap-1.5">
+              <span className={cn(
+                "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border flex items-center gap-1.5",
+                profile?.isPhoneVerified 
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-100" 
+                  : "bg-amber-50 text-amber-700 border-amber-100"
+              )}>
                 <ShieldCheck className="w-3.5 h-3.5" />
-                Verified Account
+                {profile?.isPhoneVerified ? 'Verified Account' : 'Unverified Account'}
               </span>
             </div>
             {uploadError && (

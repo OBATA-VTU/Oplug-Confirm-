@@ -20,10 +20,7 @@ export default function VerifyPhone() {
     if (!authLoading && !user) {
       navigate('/login');
     }
-    if (profile?.isPhoneVerified) {
-      navigate('/dashboard');
-    }
-  }, [user, profile, authLoading, navigate]);
+  }, [user, authLoading, navigate]);
 
   useEffect(() => {
     let interval: any;
@@ -36,7 +33,7 @@ export default function VerifyPhone() {
   }, [timer]);
 
   const handleSendOtp = async () => {
-    if (!user?.email) return;
+    if (!user?.email || loading) return;
 
     setLoading(true);
     setError('');
@@ -47,14 +44,18 @@ export default function VerifyPhone() {
     } catch (err: any) {
       console.error('OTP Send Error:', err);
       setError(err.response?.data?.message || 'Failed to send OTP. Please try again.');
+      hasSentOtp.current = false; // Allow retry on error
     } finally {
       setLoading(false);
     }
   };
 
   // Auto-send OTP on mount if not already sent
+  const hasSentOtp = React.useRef(false);
+
   useEffect(() => {
-    if (user?.email && timer === 0 && !loading && !error) {
+    if (user?.email && !hasSentOtp.current && !loading && !error) {
+      hasSentOtp.current = true;
       handleSendOtp();
     }
   }, [user?.email]);
@@ -94,6 +95,32 @@ export default function VerifyPhone() {
       setLoading(false);
     }
   };
+
+  if (profile?.isPhoneVerified) {
+    return (
+      <AuthLayout 
+        title="Account Verified" 
+        subtitle="Your email has been successfully verified."
+      >
+        <div className="text-center space-y-8 py-10">
+          <div className="w-24 h-24 bg-emerald-50 text-emerald-600 rounded-[2.5rem] flex items-center justify-center mx-auto shadow-xl shadow-emerald-100">
+            <ShieldCheck className="w-12 h-12" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-black text-gray-900">You're all set!</h2>
+            <p className="text-sm text-gray-500 font-medium">Thank you for securing your account.</p>
+          </div>
+          <button 
+            onClick={() => navigate('/dashboard')}
+            className="w-full bg-blue-700 text-white font-black py-5 rounded-2xl hover:bg-blue-800 transition-all shadow-xl shadow-blue-200 active:scale-[0.98] flex items-center justify-center gap-3"
+          >
+            GO TO DASHBOARD
+            <ArrowRight className="w-5 h-5" />
+          </button>
+        </div>
+      </AuthLayout>
+    );
+  }
 
   return (
     <AuthLayout 

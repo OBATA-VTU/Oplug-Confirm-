@@ -112,8 +112,8 @@ export default function Signup() {
       // Send Welcome Email
       emailService.sendWelcomeEmail(email.toLowerCase(), firstName);
 
-      showToast('success', 'Account Created!', 'Welcome to Oplug! Please verify your email to continue.');
-      navigate('/verify-phone');
+      showToast('success', 'Account Created!', 'Welcome to Oplug! Your account has been set up successfully.');
+      navigate('/dashboard');
     } catch (err: any) {
       const friendlyMsg = getFriendlyErrorMessage(err);
       setError(friendlyMsg);

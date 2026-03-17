@@ -144,9 +144,23 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "amount", "proofUrl", "status", "createdAt"]
+    },
+    "OTP": {
+      "title": "OTP",
+      "description": "Temporary storage for email verification codes.",
+      "type": "object",
+      "properties": {
+        "otp": { "type": "string" },
+        "expiresAt": { "type": "number" }
+      },
+      "required": ["otp", "expiresAt"]
     }
   },
   "firestore": {
+    "/otps/{email}": {
+      "schema": "OTP",
+      "description": "Temporary OTP storage."
+    },
     "/users/{userId}": {
       "schema": "UserProfile",
       "description": "User profile documents."

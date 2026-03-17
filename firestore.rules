@@ -1,6 +1,11 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Allow admins full read access to everything
+    match /{allPaths=**} {
+      allow read: if isAdmin();
+    }
+
     // ===============================================================
     // Assumed Data Model
     // ===============================================================
@@ -61,8 +66,9 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() && (
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-        (request.auth.token.email == "samyjkr36@gmail.com" && request.auth.token.email_verified == true)
+        request.auth.token.email == "samyjkr36@gmail.com" ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
       );
     }
 
@@ -94,9 +100,11 @@ service cloud.firestore {
     // ===============================================================
 
     match /users/{userId} {
-      // Allow read for authenticated users to check usernames/emails or for admins
-      // Hardened: Users can only read their own full profile, others can only see public info if needed
-      allow read: if isAuthenticated();
+      // Allow individual read for owner or admin
+      // Allow listing only for admins
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      
       allow create: if isAuthenticated() && request.auth.uid == userId && isValidUser(request.resource.data);
       allow update: if (isOwner(userId) && 
                        // Prevent self-escalation to admin
@@ -145,6 +153,14 @@ service cloud.firestore {
     match /cache/{cacheId} {
       allow read: if true;
       allow write: if isAdmin();
+    }
+
+    match /otps/{email} {
+      allow read, write: if true;
+    }
+
+    match /health_check/{docId} {
+      allow read, write: if true;
     }
   }
 }

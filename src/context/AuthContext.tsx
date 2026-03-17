@@ -35,6 +35,8 @@ interface UserProfile {
   isProfileComplete: boolean;
   isPhoneVerified?: boolean;
   isAdmin?: boolean;
+  nin?: string;
+  bvn?: string;
   createdAt: any;
   photoURL?: string;
   address?: string;
@@ -81,10 +83,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Listen to profile changes
         const profileRef = doc(db, 'users', firebaseUser.uid);
         unsubscribeProfile = onSnapshot(profileRef, (docSnap) => {
+          console.log('Profile snapshot received:', docSnap.exists() ? 'exists' : 'does not exist');
           if (docSnap.exists()) {
-            setProfile(docSnap.data() as UserProfile);
+            const data = docSnap.data() as UserProfile;
+            // Explicitly set isAdmin if email matches or role is admin
+            const isAdmin = firebaseUser.email === 'samyjkr36@gmail.com' || data.role === 'admin';
+            console.log('User is admin:', isAdmin);
+            setProfile({ ...data, isAdmin });
           } else {
+            console.log('Creating initial profile for:', firebaseUser.email);
             // Create initial profile if it doesn't exist
+            const isAdmin = firebaseUser.email === 'samyjkr36@gmail.com';
             const initialProfile: UserProfile = {
               id: firebaseUser.uid,
               email: firebaseUser.email || '',
@@ -94,7 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               username: firebaseUser.email?.split('@')[0] || 'user',
               phone: '',
               walletBalance: 0,
-              role: 'user',
+              role: isAdmin ? 'admin' : 'user',
               status: 'active',
               referralCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
               referralCount: 0,
@@ -104,14 +113,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               transactionPin: '',
               isProfileComplete: false,
               isPhoneVerified: false,
+              isAdmin: isAdmin,
               createdAt: new Date(),
             };
-            setDoc(profileRef, initialProfile).catch(err => console.error('Error creating profile:', err));
+            setDoc(profileRef, initialProfile)
+              .then(() => console.log('Initial profile created successfully'))
+              .catch(err => console.error('Error creating profile:', err));
             setProfile(initialProfile);
           }
           setLoading(false);
         }, (error) => {
-          console.error('Profile listener error:', error);
+          console.error('Profile listener error (PERMISSION_DENIED?):', error);
           setLoading(false);
         });
       } else {

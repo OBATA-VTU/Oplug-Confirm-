@@ -55,6 +55,13 @@ export default function Upgrade() {
       return;
     }
 
+    if (!profile.nin || !profile.bvn) {
+      setProcessStatus('error');
+      setProcessMessage('NIN and BVN verification is required for Reseller upgrade. Please update your profile.');
+      setShowProcessing(true);
+      return;
+    }
+
     if (profile.balance < UPGRADE_FEE) {
       // Redirect to fund wallet with the required amount
       navigate('/fund', { state: { amount: UPGRADE_FEE - profile.balance, reason: 'Account Upgrade' } });

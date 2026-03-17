@@ -7,15 +7,18 @@ import { cn } from '../lib/utils';
 export default function AdminUsers() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
+        setError(null);
         const usersSnap = await getDocs(query(collection(db, 'users'), orderBy('createdAt', 'desc')));
         setUsers(usersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error fetching users:', err);
+        setError(err.message || 'Failed to fetch users. Please check your permissions.');
       } finally {
         setLoading(false);
       }
@@ -40,6 +43,21 @@ export default function AdminUsers() {
   );
 
   if (loading) return <div>Loading users...</div>;
+  if (error) return (
+    <div className="p-8 text-center">
+      <div className="bg-red-50 text-red-600 p-6 rounded-3xl border border-red-100 inline-block max-w-md">
+        <Shield className="w-12 h-12 mx-auto mb-4 opacity-50" />
+        <h2 className="text-xl font-bold mb-2">Access Denied</h2>
+        <p className="text-sm opacity-80">{error}</p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="mt-6 px-6 py-2 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-colors"
+        >
+          Retry
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-8">

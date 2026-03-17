@@ -47,20 +47,210 @@ try {
 }
 
 // Initialize Firebase Admin
-if (!admin.apps.length && firebaseConfig.projectId) {
+if (!admin.apps.length) {
   try {
-    admin.initializeApp({
-      projectId: firebaseConfig.projectId,
+    // Prioritize the projectId from the config file as it's the one provisioned for this app
+    const projectId = firebaseConfig.projectId || process.env.GOOGLE_CLOUD_PROJECT || process.env.PROJECT_ID;
+    console.log('Environment Project IDs:', {
+      config: firebaseConfig.projectId,
+      GOOGLE_CLOUD_PROJECT: process.env.GOOGLE_CLOUD_PROJECT,
+      PROJECT_ID: process.env.PROJECT_ID,
+      GOOGLE_APPLICATION_CREDENTIALS: process.env.GOOGLE_APPLICATION_CREDENTIALS ? 'SET' : 'NOT SET'
     });
-  } catch (error) {
-    console.error('Error initializing Firebase Admin:', error);
+    
+    if (projectId) {
+      console.log(`Initializing Firebase Admin with Project ID: ${projectId}`);
+      admin.initializeApp({
+        credential: admin.credential.applicationDefault(),
+        projectId: projectId
+      });
+    } else {
+      console.log('Initializing Firebase Admin with default settings (auto-discovery)');
+      admin.initializeApp({
+        credential: admin.credential.applicationDefault()
+      });
+    }
+    
+    const app = admin.app();
+    console.log(`Firebase Admin initialized successfully. Project ID in app: ${app.options.projectId || 'auto-discovered'}`);
+    
+    if (projectId && app.options.projectId && app.options.projectId !== projectId) {
+      console.warn(`WARNING: Admin Project ID (${app.options.projectId}) does not match requested Project ID (${projectId})`);
+    }
+  } catch (error: any) {
+    console.error('Error initializing Firebase Admin:', error.message);
+    try {
+      // Fallback to default initialization which uses environment credentials
+      if (admin.apps.length === 0) {
+        admin.initializeApp();
+        console.log('Firebase Admin initialized with default fallback');
+      }
+    } catch (e: any) {
+      console.error('Failed to initialize Firebase Admin even with defaults:', e.message);
+    }
   }
 }
 
-const databaseId = firebaseConfig.firestoreDatabaseId;
-const adminDb = databaseId && databaseId !== '(default)' 
-  ? getFirestore(databaseId) 
-  : getFirestore();
+const databaseId = firebaseConfig.firestoreDatabaseId || '(default)';
+console.log(`Config Database ID: ${databaseId}`);
+
+let adminDb: admin.firestore.Firestore;
+let currentDbId = databaseId;
+
+function initDb(dbId?: string) {
+  try {
+    if (dbId && dbId !== '(default)') {
+      console.log(`Initializing Firestore Admin with databaseId: ${dbId}`);
+      return getFirestore(admin.app(), dbId);
+    }
+    console.log('Initializing Firestore Admin with default database');
+    return getFirestore(admin.app());
+  } catch (error) {
+    console.error(`Error initializing Firestore Admin with ${dbId}, falling back to default:`, error);
+    return getFirestore(admin.app());
+  }
+}
+
+adminDb = initDb(currentDbId);
+
+// Database health check on startup to set correct database ID
+async function checkDatabaseHealth() {
+  try {
+    console.log(`Checking health of database: ${currentDbId}...`);
+    // Use a simple get to check connectivity and permissions
+    await adminDb.collection('health_check').doc('status').get();
+    console.log(`Database ${currentDbId} is healthy.`);
+  } catch (error: any) {
+    console.warn(`Database ${currentDbId} health check failed: ${error.message} (Code: ${error.code})`);
+    if ((error.code === 5 || error.code === 7 || error.message?.includes('NOT_FOUND') || error.message?.includes('PERMISSION_DENIED')) && currentDbId !== '(default)') {
+      console.log('Switching to (default) database due to health check failure...');
+      currentDbId = '(default)';
+      adminDb = initDb(currentDbId);
+      clientDb = initClientDb(currentDbId);
+    }
+  }
+}
+checkDatabaseHealth();
+
+import { initializeApp as initializeClientApp } from 'firebase/app';
+import { getFirestore as getClientFirestore, doc, setDoc, getDoc, serverTimestamp as clientServerTimestamp, enableIndexedDbPersistence, terminate } from 'firebase/firestore';
+
+// Initialize Client SDK as fallback
+let clientDb: any;
+function initClientDb(dbId?: string) {
+  try {
+    const clientApp = initializeClientApp(firebaseConfig);
+    if (dbId && dbId !== '(default)') {
+      console.log(`Initializing Firestore Client with databaseId: ${dbId}`);
+      return getClientFirestore(clientApp, dbId);
+    }
+    console.log('Initializing Firestore Client with default database');
+    return getClientFirestore(clientApp);
+  } catch (error) {
+    console.error('Error initializing Firebase Client SDK:', error);
+    return null;
+  }
+}
+clientDb = initClientDb(currentDbId);
+
+// Helper for retrying Firestore operations
+async function withRetry<T>(operation: (db: any, isClient: boolean) => Promise<T>, maxRetries = 5): Promise<T> {
+  let lastError;
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      // Try Admin SDK first
+      console.log(`[withRetry] Attempt ${i + 1} using Admin SDK on database: ${currentDbId}`);
+      return await operation(adminDb, false);
+    } catch (error: any) {
+      lastError = error;
+      console.error(`Firestore Admin attempt ${i + 1} failed:`, error.message, 'Code:', error.code);
+      if (error.details) console.error('Error Details:', error.details);
+      
+      // Retry on NOT_FOUND (5), UNAVAILABLE (14), PERMISSION_DENIED (7), or DEADLINE_EXCEEDED (4)
+      const isRetryable = error.code === 5 || error.code === 14 || error.code === 7 || error.code === 4 ||
+                          error.message?.includes('NOT_FOUND') || 
+                          error.message?.includes('UNAVAILABLE') ||
+                          error.message?.includes('PERMISSION_DENIED') ||
+                          error.message?.includes('DEADLINE_EXCEEDED');
+      
+      if (isRetryable && i < maxRetries - 1) {
+        // If we hit NOT_FOUND (5) on a named database, try switching to default
+        // If we hit PERMISSION_DENIED (7), it might be a database-specific permission, so try switching too
+        if ((error.code === 5 || error.code === 7) && currentDbId !== '(default)') {
+          console.log(`Database ${currentDbId} returned error code ${error.code}. Trying (default) as fallback...`);
+          currentDbId = '(default)';
+          try {
+            adminDb = initDb(currentDbId);
+            clientDb = initClientDb(currentDbId);
+          } catch (e) {
+            console.error('Failed to switch database during retry:', e);
+          }
+        } else if (error.code === 5 && currentDbId === '(default)') {
+          // If (default) is not found, try the configured one if we haven't already
+          const configDbId = firebaseConfig.firestoreDatabaseId || '(default)';
+          if (configDbId !== '(default)' && currentDbId !== configDbId) {
+            console.log(`(default) not found. Trying configured database ${configDbId}...`);
+            currentDbId = configDbId;
+            adminDb = initDb(currentDbId);
+            clientDb = initClientDb(currentDbId);
+          }
+        }
+        
+        const delay = Math.pow(2, i) * 1000;
+        console.log(`Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      
+      // If Admin SDK fails all retries or is not retryable, try Client SDK as a last resort
+      if (clientDb) {
+        console.log(`Admin SDK failed. Attempting with Client SDK on database: ${currentDbId}...`);
+        try {
+          return await operation(clientDb, true);
+        } catch (clientError: any) {
+          console.error('Client SDK also failed:', clientError.message);
+          
+          // If client SDK says it's offline, try to re-initialize it
+          if (clientError.message?.includes('offline')) {
+            console.log('Client SDK reported offline. Re-initializing...');
+            clientDb = initClientDb();
+          }
+          
+          lastError = clientError;
+        }
+      }
+      
+      if (i === maxRetries - 1) {
+        throw lastError;
+      }
+    }
+  }
+  throw lastError;
+}
+
+// Test the connection to the database
+async function testAdminDb() {
+  try {
+    console.log(`Testing Firestore connection with Database ID: ${currentDbId}...`);
+    await withRetry(async (db, isClient) => {
+      if (isClient) {
+        await getDoc(doc(db, 'health_check', 'ping'));
+      } else {
+        // Try a write as well
+        await db.collection('health_check').doc('ping').set({ time: new Date().toISOString() });
+        await db.collection('health_check').limit(1).get();
+      }
+    });
+    console.log(`Firestore connection test successful with ${currentDbId}`);
+    if (currentDbId !== databaseId) {
+      console.warn(`WARNING: Using fallback database ${currentDbId} because the configured database ${databaseId} failed with permissions/not found errors.`);
+    }
+  } catch (error: any) {
+    console.error(`Firestore connection test failed permanently for all databases: ${error.message}`);
+    if (error.stack) console.error(error.stack);
+  }
+}
+testAdminDb();
 
 export const app = express();
 app.use(express.json());
@@ -79,18 +269,38 @@ app.get('/api/ping', (req, res) => {
 app.get('/api/health', async (req, res) => {
   try {
     // Check if settings exist, if not create them
-    const settingsRef = adminDb.collection('settings').doc('general');
-    const settingsSnap = await settingsRef.get();
-    if (!settingsSnap.exists) {
-      await settingsRef.set({
-        siteName: 'Oplug',
-        siteDescription: 'Fastest VTU Platform in Nigeria',
-        announcement: 'Welcome to Oplug! Buy data and airtime at the cheapest rates.',
-        referralBonus: 50,
-        resellerUpgradeFee: 2000,
-        smartUserPackageName: 'Smart User',
-        resellerPackageName: 'Reseller',
-        heroImage: 'https://images.unsplash.com/photo-1556157382-97dee2dcb756?auto=format&fit=crop&q=80&w=1000'
+    const settingsSnap = await withRetry(async (db, isClient) => {
+      if (isClient) {
+        return await getDoc(doc(db, 'settings', 'general'));
+      } else {
+        return await db.collection('settings').doc('general').get();
+      }
+    });
+
+    if (!settingsSnap.exists() || (typeof settingsSnap.exists === 'function' ? !settingsSnap.exists() : !settingsSnap.exists)) {
+      await withRetry(async (db, isClient) => {
+        const data = {
+          siteName: 'Oplug',
+          siteDescription: 'Fastest VTU Platform in Nigeria',
+          announcement: 'Welcome to Oplug! Buy data and airtime at the cheapest rates.',
+          referralBonus: 50,
+          resellerUpgradeFee: 2000,
+          contactEmail: 'support@oplug.com',
+          contactPhone: '+2348000000000',
+          whatsappNumber: '+2348000000000',
+          minFundingAmount: 100,
+          maxFundingAmount: 50000,
+          smartUserPackageName: 'Smart User',
+          resellerPackageName: 'Reseller',
+          heroImage: 'https://images.unsplash.com/photo-1556157382-97dee2dcb756?auto=format&fit=crop&q=80&w=1000',
+          updatedAt: isClient ? clientServerTimestamp() : admin.firestore.FieldValue.serverTimestamp()
+        };
+        
+        if (isClient) {
+          await setDoc(doc(db, 'settings', 'general'), data);
+        } else {
+          await db.collection('settings').doc('general').set(data);
+        }
       });
       console.log('Default settings initialized');
     }
@@ -124,19 +334,30 @@ app.post('/api/auth/send-otp', async (req, res) => {
 
   try {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+    const expiresAtMillis = Date.now() + 10 * 60 * 1000; // 10 minutes
 
-    await adminDb.collection('otps').doc(email).set({
-      otp,
-      expiresAt,
-      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    await withRetry(async (db, isClient) => {
+      const data = {
+        otp,
+        expiresAt: isClient 
+          ? new Date(expiresAtMillis) 
+          : admin.firestore.Timestamp.fromMillis(expiresAtMillis),
+        createdAt: isClient ? clientServerTimestamp() : admin.firestore.FieldValue.serverTimestamp()
+      };
+      
+      if (isClient) {
+        await setDoc(doc(db, 'otps', email), data);
+      } else {
+        await db.collection('otps').doc(email).set(data);
+      }
     });
 
-    await mailjet.post('send', { version: 'v3.1' }).request({
+    console.log(`Attempting to send OTP to ${email} via Mailjet...`);
+    const mailjetResponse = await mailjet.post('send', { version: 'v3.1' }).request({
       Messages: [
         {
           From: {
-            Email: 'noreply@oplug.com.ng', // Ensure this is a verified sender in Mailjet
+            Email: process.env.MAILJET_SENDER_EMAIL || 'obaofaaua@gmail.com', // Use env var or fallback
             Name: 'Oplug'
           },
           To: [{ Email: email }],
@@ -157,11 +378,16 @@ app.post('/api/auth/send-otp', async (req, res) => {
         }
       ]
     });
+    console.log('Mailjet OTP response:', JSON.stringify(mailjetResponse.body));
 
     res.json({ status: 'success', message: 'OTP sent successfully' });
   } catch (error: any) {
     console.error('Send OTP Error:', error);
-    res.status(500).json({ message: 'Failed to send OTP' });
+    let message = 'Failed to send OTP';
+    if (error.code === 7 || error.message?.includes('PERMISSION_DENIED')) {
+      message = 'Database permission denied. This usually happens if Firebase is not correctly set up. Please click the "Setup Firebase" button in the AI Studio UI to fix this.';
+    }
+    res.status(500).json({ message, error: error.message });
   }
 });
 
@@ -170,26 +396,62 @@ app.post('/api/auth/verify-otp', async (req, res) => {
   if (!email || !otp) return res.status(400).json({ message: 'Email and OTP are required' });
 
   try {
-    const otpDoc = await adminDb.collection('otps').doc(email).get();
-    if (!otpDoc.exists) return res.status(400).json({ message: 'Invalid or expired OTP' });
+    const otpDoc = await withRetry(async (db, isClient) => {
+      if (isClient) {
+        return await getDoc(doc(db, 'otps', email));
+      } else {
+        return await db.collection('otps').doc(email).get();
+      }
+    });
+    
+    const exists = typeof otpDoc.exists === 'function' ? otpDoc.exists() : otpDoc.exists;
+    if (!exists) return res.status(400).json({ message: 'Invalid or expired OTP' });
 
     const data = otpDoc.data();
     if (data?.otp !== otp) return res.status(400).json({ message: 'Invalid OTP' });
-    if (Date.now() > data?.expiresAt) return res.status(400).json({ message: 'OTP has expired' });
+    
+    // Handle both Date and Timestamp for expiresAt
+    const expiresAt = data?.expiresAt?.toMillis ? data.expiresAt.toMillis() : 
+                     (data?.expiresAt instanceof Date ? data.expiresAt.getTime() : 
+                     (typeof data?.expiresAt === 'number' ? data.expiresAt : 0));
+
+    if (Date.now() > expiresAt) return res.status(400).json({ message: 'OTP has expired' });
 
     // Mark as verified in users collection
-    const userSnapshot = await adminDb.collection('users').where('email', '==', email).limit(1).get();
-    if (!userSnapshot.empty) {
-      await userSnapshot.docs[0].ref.update({ isPhoneVerified: true }); // Keeping field name for compatibility
-    }
+    await withRetry(async (db, isClient) => {
+      if (isClient) {
+        const { query, collection, where, limit, getDocs, updateDoc } = await import('firebase/firestore');
+        const q = query(collection(db, 'users'), where('email', '==', email), limit(1));
+        const userSnapshot = await getDocs(q);
+        if (!userSnapshot.empty) {
+          await updateDoc(userSnapshot.docs[0].ref, { isPhoneVerified: true });
+        }
+      } else {
+        const userSnapshot = await db.collection('users').where('email', '==', email).limit(1).get();
+        if (!userSnapshot.empty) {
+          await userSnapshot.docs[0].ref.update({ isPhoneVerified: true });
+        }
+      }
+    });
 
     // Delete OTP after successful verification
-    await otpDoc.ref.delete();
+    await withRetry(async (db, isClient) => {
+      if (isClient) {
+        const { deleteDoc } = await import('firebase/firestore');
+        await deleteDoc(doc(db, 'otps', email));
+      } else {
+        await adminDb.collection('otps').doc(email).delete();
+      }
+    });
 
     res.json({ status: 'success', message: 'Verification successful' });
   } catch (error: any) {
     console.error('Verify OTP Error:', error);
-    res.status(500).json({ message: 'Verification failed' });
+    let message = 'Verification failed';
+    if (error.code === 7 || error.message?.includes('PERMISSION_DENIED')) {
+      message = 'Database permission denied. Please ensure Firebase is correctly set up.';
+    }
+    res.status(500).json({ message, error: error.message });
   }
 });
 
@@ -574,13 +836,14 @@ app.post('/api/email/welcome', async (req, res) => {
       return res.status(200).json({ message: 'Mailjet not configured, skipping email' });
     }
 
+    console.log(`Attempting to send welcome email to ${email} via Mailjet...`);
     const result = await mailjet
       .post("send", { version: 'v3.1' })
       .request({
         Messages: [
           {
             From: {
-              Email: "noreply@oplug.com",
+              Email: process.env.MAILJET_SENDER_EMAIL || "obaofaaua@gmail.com",
               Name: "OPLUG VTU"
             },
             To: [
@@ -622,6 +885,7 @@ app.post('/api/email/welcome', async (req, res) => {
           }
         ]
       });
+    console.log('Mailjet welcome email response:', JSON.stringify(result.body));
     res.json(result.body);
   } catch (error: any) {
     console.error('Mailjet Error:', error);
