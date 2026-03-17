@@ -3,16 +3,44 @@ import dotenv from 'dotenv';
 import axios from 'axios';
 import Mailjet from 'node-mailjet';
 import admin from 'firebase-admin';
+import { getFirestore } from 'firebase-admin/firestore';
 import { readFileSync } from 'fs';
 import path from 'path';
 
+import { fileURLToPath } from 'url';
+
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Load Firebase configuration
 let firebaseConfig: any;
 try {
-  const configPath = path.resolve(process.cwd(), 'firebase-applet-config.json');
-  firebaseConfig = JSON.parse(readFileSync(configPath, 'utf8'));
+  // Try multiple possible locations for the config file
+  const possiblePaths = [
+    path.resolve(process.cwd(), 'firebase-applet-config.json'),
+    path.resolve(process.cwd(), 'api', 'firebase-applet-config.json'),
+    path.join(__dirname, '..', 'firebase-applet-config.json'),
+    path.join(__dirname, 'firebase-applet-config.json')
+  ];
+  
+  let configContent = null;
+  for (const p of possiblePaths) {
+    try {
+      configContent = readFileSync(p, 'utf8');
+      console.log(`Loaded firebase config from: ${p}`);
+      break;
+    } catch (e) {
+      // Continue to next path
+    }
+  }
+
+  if (configContent) {
+    firebaseConfig = JSON.parse(configContent);
+  } else {
+    throw new Error('Could not find firebase-applet-config.json in any expected location');
+  }
 } catch (error) {
   console.error('Error loading firebase-applet-config.json:', error);
   firebaseConfig = {};
@@ -31,8 +59,8 @@ if (!admin.apps.length && firebaseConfig.projectId) {
 
 const databaseId = firebaseConfig.firestoreDatabaseId;
 const adminDb = databaseId && databaseId !== '(default)' 
-  ? admin.firestore(databaseId) 
-  : admin.firestore();
+  ? getFirestore(databaseId) 
+  : getFirestore();
 
 export const app = express();
 app.use(express.json());
@@ -43,6 +71,10 @@ const mailjet = process.env.MAILJET_API_KEY && process.env.MAILJET_SECRET_KEY
       apiSecret: process.env.MAILJET_SECRET_KEY
     })
   : null;
+
+app.get('/api/ping', (req, res) => {
+  res.json({ status: 'pong', time: new Date().toISOString() });
+});
 
 app.get('/api/health', async (req, res) => {
   try {
